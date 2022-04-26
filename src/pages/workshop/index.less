@@ -1,0 +1,70 @@
+@backgroundColor: #1b1c1d;
+@hoverColor: #59A1FF;
+@activeColor: #3183FF;
+button {
+  border: none;
+  background-color: @activeColor;
+}
+
+.container {
+  height: 100vh;
+  background-color: @backgroundColor;
+  font-family: Helvetica-Regular, Helvetica;
+
+  header {
+    height: 56px;
+    color: white;
+    display: flex;
+
+    .menu,
+    .operation {
+      display: flex;
+      align-items: center;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      li {
+        padding: 0 16px;
+        line-height: 56px;
+        cursor: pointer;
+        transition: background-color .2s;
+        &:hover {
+          background-color: @hoverColor;
+        }
+      }
+    }
+    .operation {
+      margin-left: 35px;
+      li {
+        padding: 0 12px;
+      }
+      img {
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .mintWrap {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 0 16px;
+      .mint {
+        padding: 8px 16px;
+        border-radius: 8px;
+      }
+    }
+  }
+
+  .projectName {
+    height: 30px;
+    background-color: #323436;
+    text-align: center;
+    line-height: 30px;
+    color: white;
+  }
+
+}
+
+
