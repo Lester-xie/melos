@@ -20,10 +20,16 @@
     ]
   },
   "dependencies": {
+    "@ant-design/icons": "^4.7.0",
     "@ant-design/pro-layout": "^6.5.0",
+    "classnames": "^2.3.1",
+    "events": "^3.3.0",
+    "file-saver": "^2.0.5",
     "react": "17.x",
     "react-dom": "17.x",
-    "umi": "^3.5.23"
+    "tone": "^14.7.77",
+    "umi": "^3.5.23",
+    "waveform-playlist": "^4.3.3"
   },
   "devDependencies": {
     "@types/react": "^17.0.0",

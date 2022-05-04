@@ -1,5 +1,6 @@
 import styles from './index.less';
-import Chat from '@/components/chat'
+import Chat from '@/components/chat';
+import Workspace from '@/components/workspace';
 
 export default function IndexPage() {
   return (
@@ -10,12 +11,6 @@ export default function IndexPage() {
           <li>Band's Music</li>
           <li>New</li>
         </ul>
-        <ul className={styles.operation}>
-          <li><img src={require('@/assets/workshop/pointer.png')} alt=""/></li>
-          <li><img src={require('@/assets/workshop/cut.png')} alt=""/></li>
-          <li><img src={require('@/assets/workshop/paste.png')} alt=""/></li>
-          <li><img src={require('@/assets/workshop/pull.png')} alt=""/></li>
-        </ul>
         <div className={styles.mintWrap}>
           <button className={styles.mint}>Mint NFT</button>
         </div>
@@ -23,6 +18,7 @@ export default function IndexPage() {
       <div className={styles.projectName}>Project Name</div>
       <main>
         <Chat />
+        <Workspace />
       </main>
     </div>
   );

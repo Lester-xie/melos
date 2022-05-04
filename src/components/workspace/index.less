@@ -1,0 +1,130 @@
+.container {
+  flex: 1;
+  display: flex;
+  position: relative;
+
+  .trackContainer {
+    flex: 1;
+    background-color: #000;
+
+    .operation {
+      display: flex;
+      align-items: center;
+      height: 60px;
+      background-color: #1b1c1d;
+
+      .addBtn {
+        background-color: #3183ff;
+        width: 250px;
+        height: 40px;
+        padding: 4px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 16px;
+        color: white;
+        margin: 0 10px;
+
+        &:active {
+          box-shadow: inset 0 0 16px rgba(168, 185, 255);
+        }
+
+        span {
+          font-size: 16px;
+          height: 16px;
+        }
+      }
+
+      .trackTransport {
+        height: 46px;
+        margin-right: 10px;
+
+        button {
+          background-color: #ddd;
+          font-family: 'icomoon';
+          position: relative;
+          font-size: 1.32em;
+          display: inline-block;
+          border-radius: 3px;
+          width: 38px;
+          height: 38px;
+          margin: 4px 6px;
+          text-align: center;
+          line-height: 25px;
+          border: none;
+          outline: 0;
+          padding: 0;
+
+          &:hover {
+            box-shadow: 0 0 6px #7799ff;
+          }
+
+          &:active {
+            box-shadow: inset 0 0 10px #262626;
+          }
+        }
+
+        .stopBtn:before {
+          content: '\ea1e';
+        }
+
+        .playBtn:before {
+          content: '\ea1c';
+        }
+
+        .pauseBtn:before {
+          content: '\ea1d';
+        }
+
+        .copyBtn:before {
+          content: '\e925';
+        }
+
+        .pasteBtn:before {
+          content: '\e926';
+        }
+
+        .cutBtn:before {
+          content: '\ea5a';
+        }
+
+        span {
+          font-size: 22px;
+        }
+
+        .cursorIcon {
+          width: 24px;
+          height: 24px;
+          position: relative;
+          bottom: 2px;
+        }
+
+        .activeState {
+          box-shadow: inset 0 0 10px #262626;
+
+          &:hover {
+            box-shadow: inset 0 0 10px #262626;
+          }
+        }
+      }
+    }
+
+    .trackWrap {
+      display: flex;
+
+      .trackInfo {
+        width: 270px;
+      }
+
+      .trackList {
+        flex: 1;
+
+        :global(.channel-wrapper) {
+          :global(.waveform) {
+            margin: 6px 0;
+          }
+        }
+      }
+    }
+  }
+}
