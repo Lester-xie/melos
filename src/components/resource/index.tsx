@@ -44,7 +44,7 @@ export default function Resource(props: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [tagList, setTagList] = useState([
     {
-      id: 1,
+      id: 0,
       text: 'Vocals',
       src: 'https://naomiaro.github.io/waveform-playlist/media/audio/Vocals30.mp3',
       name: 'Vocals30.mp3',
@@ -52,7 +52,7 @@ export default function Resource(props: Props) {
       active: false,
     },
     {
-      id: 2,
+      id: 1,
       text: 'Piano',
       src: 'https://naomiaro.github.io/waveform-playlist/media/audio/PianoSynth30.mp3',
       name: 'PianoSynth30.mp3',
@@ -60,11 +60,43 @@ export default function Resource(props: Props) {
       active: false,
     },
     {
-      id: 3,
+      id: 2,
       text: 'Bass',
       src: 'https://naomiaro.github.io/waveform-playlist/media/audio/BassDrums30.mp3',
       name: 'BassDrums30.mp3',
-      time: '2022-05-06 09:18',
+      time: '2022-05-07 12:13',
+      active: false,
+    },
+    {
+      id: 3,
+      text: 'Hop',
+      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/7.mp3',
+      name: '329.mp3',
+      time: '2022-05-05 14:31',
+      active: false,
+    },
+    {
+      id: 4,
+      text: 'Trip',
+      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/8.mp3',
+      name: '305.mp3',
+      time: '2022-05-06 17:18',
+      active: false,
+    },
+    {
+      id: 5,
+      text: 'Pop',
+      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/9.mp3',
+      name: '318.mp3',
+      time: '2022-05-06 19:01',
+      active: false,
+    },
+    {
+      id: 6,
+      text: 'Grunge',
+      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/9.mp3',
+      name: '054.mp3',
+      time: '2022-05-06 12:10',
       active: false,
     },
   ]);
@@ -115,20 +147,46 @@ export default function Resource(props: Props) {
         </div>
         <Collapse label="Input sources" collapse={true}>
           <div>
-            {tagList.map((tag, index) => {
+            {tagList.slice(0, 3).map((tag) => {
               return (
                 <Tag
                   text={tag.text}
                   active={tag.active}
-                  onClick={() => onTagClicked(index)}
+                  onClick={() => onTagClicked(tag.id)}
                   key={tag.id}
                 />
               );
             })}
           </div>
         </Collapse>
-        <Collapse label="Fx Types" />
-        <Collapse label="characters" />
+        <Collapse label="Fx Types">
+          <div>
+            {tagList.slice(3, 6).map((tag) => {
+              return (
+                <Tag
+                  text={tag.text}
+                  active={tag.active}
+                  onClick={() => onTagClicked(tag.id)}
+                  key={tag.id}
+                />
+              );
+            })}
+          </div>
+        </Collapse>
+        <Collapse label="characters">
+          <div>
+            {tagList.slice(6).map((tag) => {
+              return (
+                <Tag
+                  text={tag.text}
+                  active={tag.active}
+                  onClick={() => onTagClicked(tag.id)}
+                  key={tag.id}
+                />
+              );
+            })}
+          </div>
+        </Collapse>
         <div className={styles.resultWrap}>
           <div className={styles.title}>Result</div>
           <ul className={styles.resultList}>

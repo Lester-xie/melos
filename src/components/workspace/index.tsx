@@ -36,12 +36,12 @@ export default function Workspace() {
   const [trackList, setTrackList] = useState<any[]>([]);
   const [state, setState] = useState<State>('cursor');
   const [playContext, setPlayContext] = useState<any>(null);
+  const [isNoneState, setIsNoneState] = useState(false);
 
   // useSocket();
 
   useEffect(() => {
     setToneCtx(Tone.getContext());
-    window.localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2Mjc2MTViMTg0OWM0NjNmZTZhY2RhMWYiLCJuYW1lIjoiamlhbmd0dSIsImV4cCI6MTY1NDQ5Nzk2OSwiaWF0IjoxNjUxOTA1OTY5fQ.usvkcE2kX8Qy2YJnmbvzQiMIonYjkPme6iJaP_iz8tQ')
   }, []);
 
   const container = useCallback(
@@ -141,9 +141,13 @@ export default function Workspace() {
   const onDeleteClicked = (index: number) => {
     ee.emit('removeTrack', playContext.tracks[index]);
     setTrackList([...playContext.tracks]);
+    if (playContext.tracks.length === 0) {
+      setIsNoneState(true);
+    }
   };
 
   const onFileSelect = (file: any, type: 'cloud' | 'local') => {
+    setIsNoneState(false);
     playContext.load([file]).then(() => {
       setTrackList([...playContext.tracks]);
     });
@@ -212,6 +216,7 @@ export default function Workspace() {
           </div>
         </div>
         <div className={styles.trackWrap}>
+          {/*{!isNoneState && <div ref={container} className={styles.trackList} />}*/}
           <div ref={container} className={styles.trackList} />
         </div>
       </div>

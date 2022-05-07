@@ -2,7 +2,7 @@ import { request } from 'umi';
 
 /** login */
 export async function Login(name: string) {
-  return request<API.User>(`api/user/signin`, {
+  return request<API.User>(`user/signin`, {
     method: 'POST',
     data: {
       name,
@@ -11,7 +11,7 @@ export async function Login(name: string) {
 }
 
 export async function fetchPresigned(ext: string) {
-  return request(`api/asset/getPresigned`, {
+  return request(`asset/getPresigned`, {
     method: 'POST',
     data: {
       ext,
@@ -34,7 +34,7 @@ export async function uploadAudio(uploadLink: string, data: any) {
 }
 
 export async function createAsset(token: string) {
-  return request(`api/asset/create`, {
+  return request(`asset/create`, {
     method: 'POST',
     data: {
       token,
@@ -43,7 +43,7 @@ export async function createAsset(token: string) {
 }
 
 export async function fetchTagList() {
-  return request(`api/label/search`, {
+  return request(`label/search`, {
     method: 'POST',
     data: {
       conds: {},
