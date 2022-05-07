@@ -54,11 +54,12 @@ export default function Resource(props: Props) {
       <div className={styles.trackList}>
         {props?.tracks?.map((item, index) => (
           <TrackItem
+            key={item.name}
             trackItem={item}
             item={{
               name: item.name,
               userName: 'John Doe',
-              avatar: 'https://i.pravatar.cc/50',
+              avatar: `https://joeschmoe.io/api/v1/${index}`,
               status: 'online',
             }}
           />

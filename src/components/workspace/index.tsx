@@ -1,8 +1,10 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import EventEmitter from 'events';
-import WaveformPlaylist from 'waveform-playlist';
+//@ts-ignore
+import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
+import { cloneDeep } from 'lodash';
 import styles from './index.less';
 
 import {
@@ -12,8 +14,19 @@ import {
 } from '@ant-design/icons';
 import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
+import { io } from 'socket.io-client';
 
 type State = 'cursor' | 'select';
+
+const useSocket = () => {
+  useEffect(() => {
+    const token = window.localStorage.getItem('token');
+    const socket = io(`ws://8.218.125.220?token=${token}`);
+    socket.on('connect', () => {
+      console.log(socket.id);
+    });
+  }, []);
+};
 
 export default function Workspace() {
   const [ee] = useState(new EventEmitter());
@@ -21,11 +34,15 @@ export default function Workspace() {
   const setUpChain = useRef();
 
   const [showResource, setShowResource] = useState(false);
+  const [trackList, setTrackList] = useState([]);
   const [state, setState] = useState<State>('cursor');
   const [playContext, setPlayContext] = useState<any>(null);
 
+  // useSocket();
+
   useEffect(() => {
     setToneCtx(Tone.getContext());
+    // window.localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MjczOTRlNjA3YWQ5OTNmYzgwYjI4MjMiLCJuYW1lIjoiTGVzdGVyIiwiZXhwIjoxNjU0NDExMTQyLCJpYXQiOjE2NTE4MTkxNDJ9.mjOj2nvIPPLoCd8fna5KaHJ85KnGFjA-PH9z_B4RnrM')
   }, []);
 
   useEffect(() => {
@@ -79,12 +96,13 @@ export default function Workspace() {
           setPlayContext(playlist);
         });
 
-        playlist.load([
-          // {
-          //   src: 'https://simple-web-1252873427.cos.ap-shanghai.myqcloud.com/1.mp3',
-          //   name: 'track one',
-          // }
-        ]);
+        ee.on('select', function (start, end, track) {
+          // console.log(start, end, track);
+        });
+
+        playlist.load(trackList).then(() => {
+          setPlayContext(playlist);
+        });
 
         //initialize the WAV exporter.
         playlist.initExporter();
@@ -107,7 +125,7 @@ export default function Workspace() {
 
   const onCursorBtnClicked = () => {
     setState('cursor');
-    ee.emit('statechange', 'cursor');
+    ee.emit('statechange', 'select');
   };
 
   const onSwapBtnClicked = () => {
@@ -129,10 +147,30 @@ export default function Workspace() {
     setShowResource(true);
   };
 
-  const onFileSelect = (file: File) => {
-    ee.emit('newtrack', file);
-    setShowResource(false);
+  const onFileSelect = (file: any, type: 'cloud' | 'local') => {
+    const list = cloneDeep(trackList);
+    list.push(file);
+    // @ts-ignore
+    setTrackList([...list]);
+    playContext.load([file]);
+    if (type === 'local') {
+      setShowResource(false);
+    }
   };
+
+  const onCopyBtnClicked = () => {
+    console.log('copy...');
+    ee.emit('copy');
+  };
+
+  const onPasteBtnClicked = () => {
+    console.log('paste...');
+    ee.emit('paste');
+  };
+
+  useEffect(() => {
+    console.log(trackList);
+  }, [trackList]);
 
   return (
     <div className={styles.container}>
@@ -171,8 +209,8 @@ export default function Workspace() {
             >
               <SwapOutlined />
             </button>
-            <button className={styles.copyBtn} />
-            <button className={styles.pasteBtn} />
+            <button className={styles.copyBtn} onClick={onCopyBtnClicked} />
+            <button className={styles.pasteBtn} onClick={onPasteBtnClicked} />
             <button className={styles.cutBtn} onClick={onTrimBtnClicked} />
             <button>
               <UndoOutlined />

@@ -1,9 +1,11 @@
 .container {
-  // position: absolute;
-  // top: 0;
-  // left: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 270px;
   height: calc(100vh - 86px);
+  background-color: #1b1c1d;
+  z-index: 99;
 
   .header {
     height: 56px;
@@ -45,5 +47,61 @@
 
   .uploadBtn {
     display: none;
+  }
+
+  .cloudWrap {
+    .searchWrap {
+      padding: 0 16px;
+      position: relative;
+      margin: 16px 0;
+
+      input {
+        height: 40px;
+        width: 100%;
+        background-color: #323436;
+        outline: none;
+        border-radius: 8px;
+        border: none;
+        color: #707172;
+        font-size: 16px;
+        padding: 0 30px;
+      }
+
+      img {
+        width: 22px;
+        height: 22px;
+        position: absolute;
+        top: 8px;
+        left: 22px;
+      }
+    }
+
+    .resultWrap {
+      padding: 16px;
+
+      .title {
+        height: 40px;
+        font-size: 14px;
+        font-family: Helvetica-Regular, Helvetica;
+        font-weight: 400;
+        color: #ffffff;
+        line-height: 40px;
+      }
+
+      .resultList {
+        margin: 0;
+        padding: 0;
+
+        li {
+          height: 60px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          color: rgba(255, 255, 255, 0.65);
+          font-size: 16px;
+          cursor: pointer;
+        }
+      }
+    }
   }
 }

@@ -1,0 +1,124 @@
+@hoverColor: #59A1FF;
+.menu {
+  ul{
+    display: flex;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  li {
+    padding: 0 16px;
+    line-height: 56px;
+    cursor: pointer;
+    transition: background-color .2s;
+    &:hover {
+      background-color: @hoverColor;
+    }
+  }
+}
+.header{
+  background: linear-gradient(180deg, #3B3E42 0%, #323436 100%);
+  border-radius: 4px 4px 0 0;
+  height: 56px;
+  line-height: 56px;
+  text-indent: 50px;
+  font-size: 18px;
+}
+.body{
+  height: 184px;
+  padding-top: 32px;
+  background: #1B1C1D;
+  border-radius: 0 0 4px 4px;
+  input::-webkit-input-placeholder { /* WebKit, Blink, Edge */
+    color : rgba(255, 255, 255, 0.3);
+  }
+  .footer{
+    margin-top: 32px;
+    text-align: right;
+    padding-right: 48px;
+    a{
+      width: 120px;
+      height: 40px;
+      line-height: 40px;
+      text-align: center;
+      display: inline-block;
+      border: 1px solid #323334;
+      border-radius: 8px;
+      color:white;
+      font-size: 14px;
+      transition: all 0.15s linear;
+    }
+    .cancel{
+      &:hover{
+        background: #545456;
+      }
+    }
+    .create{
+      margin-left: 16px;
+      background: #3183FF;
+      &:hover{
+        background: #5699fd;
+      }
+    }
+  }
+}
+.project{
+  .search{
+    padding: 16px 16px 0 16px;
+  }
+  :global{
+    .ant-input-prefix{
+      svg{
+        color:#707172
+      }
+    }
+  }
+  .projectItems{
+    section{
+      position: relative;
+      border-bottom: 1px solid #212020;
+      padding: 16px;
+      &:hover{
+        background: #3183FF;
+        .options{
+          opacity: 1;
+          cursor: pointer;
+          &:hover{
+            transform: scale(1.2);
+          }
+        }
+      }
+      .content{
+        .projectName{
+          font-weight: bold;
+          font-size: 16px;
+        }
+        .members{
+          font-size: 14px;
+          margin: 2px 0;
+        }
+        .time{
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.65);
+        }
+      }
+      .options{
+        position: absolute;
+        width: 50px;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        top:0;
+        right: 0;
+        display: flex;
+        opacity: 0;
+        transition: all 0.15s linear;
+        img{
+          width: 20px;
+        }
+      }
+    }
+  }
+
+}
