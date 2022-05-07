@@ -111,7 +111,7 @@ export default function Resource(props: Props) {
       <div className={styles.cloudWrap}>
         <div className={styles.searchWrap}>
           <input type="text" placeholder="Search" />
-          <img src={require('@/assets/workshop/search.png')} alt="" />
+          <img src={require('@/assets/workshop/search.png')} alt="search" />
         </div>
         <Collapse label="Input sources" collapse={true}>
           <div>

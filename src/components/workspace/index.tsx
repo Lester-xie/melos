@@ -50,7 +50,7 @@ export default function Workspace() {
         const playlist = WaveformPlaylist(
           {
             ac: toneCtx.rawContext,
-            waveHeight: 116,
+            waveHeight: 158,
             container: node,
             timescale: true,
             state: 'select',

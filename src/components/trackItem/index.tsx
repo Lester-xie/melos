@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Slider } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import classNames from 'classnames';
@@ -38,8 +38,19 @@ export default function TrackItem({ trackItem, item, onDelete }: Props) {
     [trackItem],
   );
 
+  const onStereoChange = useCallback(
+    (value: number) => {
+      trackItem.ee.emit('stereopan', value / 100, trackItem);
+    },
+    [trackItem],
+  );
+
   const onPlay = useCallback(() => {
     trackItem.ee.emit('play');
+  }, [trackItem]);
+
+  useEffect(() => {
+    console.log(trackItem);
   }, [trackItem]);
 
   return (
@@ -92,15 +103,11 @@ export default function TrackItem({ trackItem, item, onDelete }: Props) {
         </Popconfirm>
       </div>
       <div className={styles.blockLower}>
-        <button type="button" className={styles.active}>
-          C
-        </button>
-        <button type="button" disabled>
-          M
-        </button>
-        <button type="button" disabled>
-          S
-        </button>
+        <img
+          src={require('@/assets/workshop/voice.png')}
+          alt="voice"
+          className={styles.voiceIcon}
+        />
         <Slider
           className={styles.slider}
           defaultValue={trackItem?.gain * 100 || 100}
@@ -128,6 +135,42 @@ export default function TrackItem({ trackItem, item, onDelete }: Props) {
             },
             '100': {
               label: <div className={styles.label}>100</div>,
+              style: {
+                transform: 'translateX(-80%)',
+              },
+            },
+          }}
+        />
+      </div>
+      <div className={styles.blockLower}>
+        <span className={styles.StereoText}>Stereo</span>
+        <Slider
+          className={styles.slider}
+          defaultValue={trackItem?.stereoPan * 100 || 0}
+          min={-100}
+          max={100}
+          onChange={onStereoChange}
+          handleStyle={{
+            width: '7px',
+            height: '13px',
+            background: '#3183FF',
+            boxShadow: '0px 2px 4px 1px rgba(185, 106, 37, 0.4)',
+            border: 'none',
+          }}
+          trackStyle={{
+            height: '5px',
+            borderRadius: '26px',
+            backgroundColor: 'transparent',
+          }}
+          marks={{
+            '-100': {
+              label: <div className={styles.label}>L</div>,
+              style: {
+                // transform: 'none',
+              },
+            },
+            '100': {
+              label: <div className={styles.label}>R</div>,
               style: {
                 transform: 'translateX(-80%)',
               },
