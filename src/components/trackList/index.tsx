@@ -1,17 +1,17 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { PlusOutlined } from '@ant-design/icons';
 import styles from './index.less';
 import TrackItem from '@/components/trackItem';
-import classNames from 'classnames';
 
 type Tab = 'M' | 'S' | 'R' | 'W' | 'A' | '';
 
 interface Props {
   onAddBtnClicked: () => void;
+  onDeleteClicked: (index: number) => void;
   tracks: any[];
 }
 
-export default function Resource(props: Props) {
+export default function TrackList(props: Props) {
   const [tab, setTab] = useState<Tab>('');
 
   return (
@@ -59,23 +59,12 @@ export default function Resource(props: Props) {
             item={{
               name: item.name,
               userName: 'John Doe',
-              avatar: `https://joeschmoe.io/api/v1/${index}`,
+              avatar: `https://joeschmoe.io/api/v1/${item.name}`,
               status: 'online',
             }}
+            onDelete={() => props.onDeleteClicked(index)}
           />
         ))}
-        {/* <TrackItem item={{
-          name: 'audio\'s name',
-          userName: 'John Doe',
-          avatar: 'https://i.pravatar.cc/50',
-          status: 'online'
-        }}/>
-        <TrackItem item={{
-          name: 'audio\'s name',
-          userName: 'John Doe',
-          avatar: 'https://i.pravatar.cc/100',
-          status: 'idle'
-        }}/> */}
       </div>
     </div>
   );

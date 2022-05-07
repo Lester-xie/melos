@@ -4,7 +4,6 @@ import EventEmitter from 'events';
 import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
-import { cloneDeep } from 'lodash';
 import styles from './index.less';
 
 import {
@@ -34,7 +33,7 @@ export default function Workspace() {
   const setUpChain = useRef();
 
   const [showResource, setShowResource] = useState(false);
-  const [trackList, setTrackList] = useState([]);
+  const [trackList, setTrackList] = useState<any[]>([]);
   const [state, setState] = useState<State>('cursor');
   const [playContext, setPlayContext] = useState<any>(null);
 
@@ -44,14 +43,6 @@ export default function Workspace() {
     setToneCtx(Tone.getContext());
     // window.localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MjczOTRlNjA3YWQ5OTNmYzgwYjI4MjMiLCJuYW1lIjoiTGVzdGVyIiwiZXhwIjoxNjU0NDExMTQyLCJpYXQiOjE2NTE4MTkxNDJ9.mjOj2nvIPPLoCd8fna5KaHJ85KnGFjA-PH9z_B4RnrM')
   }, []);
-
-  useEffect(() => {
-    if (playContext && playContext.tracks.length > 0) {
-      // 这里获取可以到playList对象
-      // 使用 playContext.tracks[0].ee.emit('play')类似的方法可以对具体的音轨进行控制
-      console.log(playContext);
-    }
-  }, [playContext]);
 
   const container = useCallback(
     (node) => {
@@ -147,12 +138,15 @@ export default function Workspace() {
     setShowResource(true);
   };
 
+  const onDeleteClicked = (index: number) => {
+    ee.emit('removeTrack', playContext.tracks[index]);
+    setTrackList([...playContext.tracks]);
+  };
+
   const onFileSelect = (file: any, type: 'cloud' | 'local') => {
-    const list = cloneDeep(trackList);
-    list.push(file);
-    // @ts-ignore
-    setTrackList([...list]);
-    playContext.load([file]);
+    playContext.load([file]).then(() => {
+      setTrackList([...playContext.tracks]);
+    });
     if (type === 'local') {
       setShowResource(false);
     }
@@ -168,10 +162,6 @@ export default function Workspace() {
     ee.emit('paste');
   };
 
-  useEffect(() => {
-    console.log(trackList);
-  }, [trackList]);
-
   return (
     <div className={styles.container}>
       <div>
@@ -181,8 +171,9 @@ export default function Workspace() {
           onSelect={onFileSelect}
         />
         <TrackList
-          tracks={playContext?.tracks}
+          tracks={trackList}
           onAddBtnClicked={onAddBtnClicked}
+          onDeleteClicked={onDeleteClicked}
         />
       </div>
       <div className={styles.trackContainer}>

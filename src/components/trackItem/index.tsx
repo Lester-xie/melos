@@ -1,13 +1,10 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Slider } from 'antd';
-import {
-  CloseOutlined,
-  PlusOutlined,
-  CaretRightFilled,
-} from '@ant-design/icons';
+import { DeleteOutlined } from '@ant-design/icons';
 import classNames from 'classnames';
 import styles from './index.less';
 import { ReactComponent as IconPlay } from '@/assets/icons/icon_play.svg';
+import { Popconfirm } from 'antd';
 
 interface Props {
   trackItem: any;
@@ -17,9 +14,10 @@ interface Props {
     avatar: string;
     status: string;
   };
+  onDelete: () => void;
 }
 
-export default function TrackItem({ trackItem, item }: Props) {
+export default function TrackItem({ trackItem, item, onDelete }: Props) {
   const [muted, setMuted] = useState<boolean>(false);
   const [solo, setSolo] = useState<boolean>(false);
 
@@ -83,6 +81,15 @@ export default function TrackItem({ trackItem, item }: Props) {
             </button>
           </div>
         </div>
+        <Popconfirm
+          placement="topLeft"
+          title="Confirm Delete？"
+          onConfirm={onDelete}
+          okText="Yes"
+          cancelText="No"
+        >
+          <DeleteOutlined className={styles.delete} />
+        </Popconfirm>
       </div>
       <div className={styles.blockLower}>
         <button type="button" className={styles.active}>
