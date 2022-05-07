@@ -41,7 +41,7 @@ export default function Workspace() {
 
   useEffect(() => {
     setToneCtx(Tone.getContext());
-    // window.localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MjczOTRlNjA3YWQ5OTNmYzgwYjI4MjMiLCJuYW1lIjoiTGVzdGVyIiwiZXhwIjoxNjU0NDExMTQyLCJpYXQiOjE2NTE4MTkxNDJ9.mjOj2nvIPPLoCd8fna5KaHJ85KnGFjA-PH9z_B4RnrM')
+    window.localStorage.setItem('token', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2Mjc2MTViMTg0OWM0NjNmZTZhY2RhMWYiLCJuYW1lIjoiamlhbmd0dSIsImV4cCI6MTY1NDQ5Nzk2OSwiaWF0IjoxNjUxOTA1OTY5fQ.usvkcE2kX8Qy2YJnmbvzQiMIonYjkPme6iJaP_iz8tQ')
   }, []);
 
   const container = useCallback(
