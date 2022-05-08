@@ -52,40 +52,6 @@ export default function Workspace({ token }: Props) {
   }, [token]);
 
   useEffect(() => {
-    if (socket && playContext) {
-      socket.removeAllListeners('action');
-      socket.on('action', (arg: any) => {
-        const { type, token: actionToken, data } = arg.extraBody;
-        if (actionToken !== token) {
-          switch (type) {
-            case 'addTrack': {
-              playContext.load([data]).then(() => {
-                setTrackList([...playContext.tracks]);
-              });
-              break;
-            }
-            case 'changeVolume': {
-              ee.emit('volumechange', data.value, trackList[data.index]);
-              const newTrackList = cloneDeep(trackList);
-              newTrackList[data.index].gain = data.value / 100;
-              setTrackList([...newTrackList]);
-              break;
-            }
-            case 'changeStereopan': {
-              ee.emit('stereopan', data.value, trackList[data.index]);
-              const newTrackList = cloneDeep(trackList);
-              newTrackList[data.index].stereoPan = data.value / 100;
-              setTrackList([...newTrackList]);
-              break;
-            }
-          }
-          message.success('Sync succeeded');
-        }
-      });
-    }
-  }, [socket, playContext, trackList]);
-
-  useEffect(() => {
     setToneCtx(Tone.getContext());
   }, []);
 
@@ -187,6 +153,7 @@ export default function Workspace({ token }: Props) {
     ee.emit('removeTrack', playContext.tracks[index]);
     setTrackList([...playContext.tracks]);
     setIsNoneState(playContext.tracks.length === 0);
+    debouncePushAction('removeTrack', { index });
   };
 
   const onCopyBtnClicked = () => {
@@ -198,6 +165,51 @@ export default function Workspace({ token }: Props) {
     console.log('paste...');
     ee.emit('paste');
   };
+
+  useEffect(() => {
+    if (socket && playContext) {
+      socket.removeAllListeners('action');
+      socket.on('action', (arg: any) => {
+        const { type, token: actionToken, data } = arg.extraBody;
+        if (actionToken !== token) {
+          console.log(123);
+          switch (type) {
+            case 'addTrack': {
+              playContext.load([data]).then(() => {
+                setTrackList([...playContext.tracks]);
+              });
+              break;
+            }
+            case 'removeTrack': {
+              ee.emit('removeTrack', playContext.tracks[data.index]);
+              setTrackList([...playContext.tracks]);
+              setIsNoneState(playContext.tracks.length === 0);
+              break;
+            }
+            case 'changeVolume': {
+              ee.emit('volumechange', data.value, trackList[data.index]);
+              const newTrackList = cloneDeep(trackList);
+              newTrackList[data.index].gain = data.value / 100;
+              setTrackList([...newTrackList]);
+              break;
+            }
+            case 'changeStereopan': {
+              ee.emit('stereopan', data.value, trackList[data.index]);
+              const newTrackList = cloneDeep(trackList);
+              newTrackList[data.index].stereoPan = data.value / 100;
+              setTrackList([...newTrackList]);
+              break;
+            }
+          }
+          message.success('Sync succeeded');
+        }
+      });
+    }
+  }, [socket, playContext, trackList]);
+
+  useEffect(() => {
+    console.log(trackList);
+  }, [trackList]);
 
   return (
     <div className={styles.container}>

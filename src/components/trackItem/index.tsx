@@ -37,7 +37,6 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
 
   useEffect(() => {
     setGain(trackItem?.gain * 100);
-    console.log(trackItem?.gain);
   }, [trackItem?.gain]);
 
   useEffect(() => {
