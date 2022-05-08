@@ -7,7 +7,7 @@ const getTypeToken = () => {
   return Token;
 };
 export const request: RequestConfig = {
-  prefix: 'http://8.218.125.220/api/v1/',
+  prefix: 'https://www.metaapp.fun/api/v1/',
   errorHandler: (error: any) => {
     const { response, data } = error;
     if (!response) {

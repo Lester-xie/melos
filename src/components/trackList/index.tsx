@@ -54,7 +54,7 @@ export default function TrackList(props: Props) {
       <div className={styles.trackList}>
         {props?.tracks?.map((item, index) => (
           <TrackItem
-            key={item.name}
+            key={item.name + index}
             trackItem={item}
             item={{
               name: item.name,
@@ -63,6 +63,7 @@ export default function TrackList(props: Props) {
               status: 'online',
             }}
             onDelete={() => props.onDeleteClicked(index)}
+            index={index}
           />
         ))}
       </div>

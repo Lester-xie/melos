@@ -4,7 +4,13 @@ import EventEmitter from 'events';
 import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
+import { message } from 'antd';
+import { cloneDeep } from 'lodash';
 import styles from './index.less';
+
+interface Props {
+  token: string | null;
+}
 
 import {
   DownloadOutlined,
@@ -14,20 +20,11 @@ import {
 import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
+import { debouncePushAction } from '@/services/api';
 
 type State = 'cursor' | 'select';
 
-const useSocket = () => {
-  useEffect(() => {
-    const token = window.localStorage.getItem('token');
-    const socket = io(`ws://8.218.125.220?token=${token}`);
-    socket.on('connect', () => {
-      console.log(socket.id);
-    });
-  }, []);
-};
-
-export default function Workspace() {
+export default function Workspace({ token }: Props) {
   const [ee] = useState(new EventEmitter());
   const [toneCtx, setToneCtx] = useState<any>(null);
   const setUpChain = useRef();
@@ -37,8 +34,56 @@ export default function Workspace() {
   const [state, setState] = useState<State>('cursor');
   const [playContext, setPlayContext] = useState<any>(null);
   const [isNoneState, setIsNoneState] = useState(false);
+  const [socket, setSocket] = useState<any>(null);
 
-  // useSocket();
+  const onFileSelect = (file: any, type: 'cloud' | 'local') => {
+    setIsNoneState(false);
+    playContext.load([file]).then(() => {
+      setTrackList([...playContext.tracks]);
+    });
+    if (type === 'local') {
+      setShowResource(false);
+    }
+    debouncePushAction('addTrack', file);
+  };
+
+  useEffect(() => {
+    setSocket(io(`https://www.metaapp.fun?token=${token}`));
+  }, [token]);
+
+  useEffect(() => {
+    if (socket && playContext) {
+      socket.removeAllListeners('action');
+      socket.on('action', (arg: any) => {
+        const { type, token: actionToken, data } = arg.extraBody;
+        if (actionToken !== token) {
+          switch (type) {
+            case 'addTrack': {
+              playContext.load([data]).then(() => {
+                setTrackList([...playContext.tracks]);
+              });
+              break;
+            }
+            case 'changeVolume': {
+              ee.emit('volumechange', data.value, trackList[data.index]);
+              const newTrackList = cloneDeep(trackList);
+              newTrackList[data.index].gain = data.value / 100;
+              setTrackList([...newTrackList]);
+              break;
+            }
+            case 'changeStereopan': {
+              ee.emit('stereopan', data.value, trackList[data.index]);
+              const newTrackList = cloneDeep(trackList);
+              newTrackList[data.index].stereoPan = data.value / 100;
+              setTrackList([...newTrackList]);
+              break;
+            }
+          }
+          message.success('Sync succeeded');
+        }
+      });
+    }
+  }, [socket, playContext, trackList]);
 
   useEffect(() => {
     setToneCtx(Tone.getContext());
@@ -141,19 +186,7 @@ export default function Workspace() {
   const onDeleteClicked = (index: number) => {
     ee.emit('removeTrack', playContext.tracks[index]);
     setTrackList([...playContext.tracks]);
-    if (playContext.tracks.length === 0) {
-      setIsNoneState(true);
-    }
-  };
-
-  const onFileSelect = (file: any, type: 'cloud' | 'local') => {
-    setIsNoneState(false);
-    playContext.load([file]).then(() => {
-      setTrackList([...playContext.tracks]);
-    });
-    if (type === 'local') {
-      setShowResource(false);
-    }
+    setIsNoneState(playContext.tracks.length === 0);
   };
 
   const onCopyBtnClicked = () => {
@@ -216,8 +249,7 @@ export default function Workspace() {
           </div>
         </div>
         <div className={styles.trackWrap}>
-          {/*{!isNoneState && <div ref={container} className={styles.trackList} />}*/}
-          <div ref={container} className={styles.trackList} />
+          {!isNoneState && <div ref={container} className={styles.trackList} />}
         </div>
       </div>
     </div>

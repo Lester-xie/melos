@@ -2,16 +2,18 @@ import styles from './index.less';
 import TopLeftBar from '@/components/topLeftBar';
 import Chat from '@/components/chat';
 import Workspace from '@/components/workspace';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Login } from '@/services/api';
 
 export default function IndexPage() {
   const [activeUser, setActiveUser] = useState('');
+  const [token, setToken] = useState(window.localStorage.getItem('token'));
   const onBtnClicked = (name: string) => {
     setActiveUser(name);
     Login(name).then((res: any) => {
       if (res.code === 0) {
         window.localStorage.setItem('token', res.data.token);
+        setToken(res.data.token);
       }
     });
   };
@@ -47,7 +49,7 @@ export default function IndexPage() {
       <div className={styles.projectName}>Project Name</div>
       <main>
         <Chat />
-        <Workspace />
+        <Workspace token={token} />
       </main>
     </div>
   );

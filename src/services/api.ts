@@ -1,5 +1,10 @@
 import { request } from 'umi';
 
+function debounce(fn: any, timeout: number) {
+  clearTimeout(fn.id);
+  fn.id = setTimeout(fn, timeout);
+}
+
 /** login */
 export async function Login(name: string) {
   return request<API.User>(`user/signin`, {
@@ -49,4 +54,23 @@ export async function fetchTagList() {
       conds: {},
     },
   });
+}
+
+function pushAction(type: string, data: any) {
+  return request(`project/action/create`, {
+    method: 'POST',
+    data: {
+      project: '627740011002cc1fda5f4045',
+      event: 'action',
+      extraBody: {
+        token: window.localStorage.getItem('token'),
+        type,
+        data,
+      },
+    },
+  });
+}
+
+export function debouncePushAction(type: string, data: any) {
+  debounce(() => pushAction(type, data), 500);
 }

@@ -5,6 +5,7 @@ import classNames from 'classnames';
 import styles from './index.less';
 import { ReactComponent as IconPlay } from '@/assets/icons/icon_play.svg';
 import { Popconfirm } from 'antd';
+import { debouncePushAction } from '@/services/api';
 
 interface Props {
   trackItem: any;
@@ -15,11 +16,14 @@ interface Props {
     status: string;
   };
   onDelete: () => void;
+  index: number;
 }
 
-export default function TrackItem({ trackItem, item, onDelete }: Props) {
+export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
   const [muted, setMuted] = useState<boolean>(false);
   const [solo, setSolo] = useState<boolean>(false);
+  const [gain, setGain] = useState<number>(100);
+  const [stereopan, setStereopan] = useState<number>(0);
 
   const onMute = useCallback(() => {
     trackItem.ee.emit('mute', trackItem);
@@ -31,26 +35,35 @@ export default function TrackItem({ trackItem, item, onDelete }: Props) {
     setSolo(!solo);
   }, [trackItem, solo]);
 
+  useEffect(() => {
+    setGain(trackItem?.gain * 100);
+    console.log(trackItem?.gain);
+  }, [trackItem?.gain]);
+
+  useEffect(() => {
+    setStereopan(trackItem?.stereoPan * 100);
+  }, [trackItem?.stereoPan]);
+
   const onVolumeChange = useCallback(
     (value: number) => {
+      setGain(value);
       trackItem.ee.emit('volumechange', value, trackItem);
+      debouncePushAction('changeVolume', { value, index });
     },
     [trackItem],
   );
 
   const onStereoChange = useCallback(
     (value: number) => {
+      setStereopan(value);
       trackItem.ee.emit('stereopan', value / 100, trackItem);
+      debouncePushAction('changeStereopan', { value, index });
     },
     [trackItem],
   );
 
   const onPlay = useCallback(() => {
     trackItem.ee.emit('play');
-  }, [trackItem]);
-
-  useEffect(() => {
-    console.log(trackItem);
   }, [trackItem]);
 
   return (
@@ -110,7 +123,7 @@ export default function TrackItem({ trackItem, item, onDelete }: Props) {
         />
         <Slider
           className={styles.slider}
-          defaultValue={trackItem?.gain * 100 || 100}
+          value={gain}
           min={0}
           max={100}
           onChange={onVolumeChange}
@@ -146,7 +159,7 @@ export default function TrackItem({ trackItem, item, onDelete }: Props) {
         <span className={styles.StereoText}>Stereo</span>
         <Slider
           className={styles.slider}
-          defaultValue={trackItem?.stereoPan * 100 || 0}
+          value={stereopan}
           min={-100}
           max={100}
           onChange={onStereoChange}
