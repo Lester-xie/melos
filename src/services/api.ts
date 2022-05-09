@@ -1,9 +1,10 @@
 import { request } from 'umi';
+import { debounce } from 'lodash';
 
-function debounce(fn: any, timeout: number) {
-  clearTimeout(fn.id);
-  fn.id = setTimeout(fn, timeout);
-}
+// function debounce(fn: any, timeout: number) {
+//   clearTimeout(fn.id);
+//   fn.id = setTimeout(fn, timeout);
+// }
 
 /** login */
 export async function Login(name: string) {
@@ -56,11 +57,32 @@ export async function fetchTagList() {
   });
 }
 
+export async function getMemberList(projectId: string) {
+  return request(`project/member/search`, {
+    method: 'POST',
+    data: {
+      conds: { project: projectId },
+      page: 1,
+      limit: 50,
+    },
+  });
+}
+
+// 获取全局用户列表
+export async function getUserList(keyword: string) {
+  return request(`user/search`, {
+    method: 'POST',
+    data: {
+      keyword,
+    },
+  });
+}
+
 function pushAction(type: string, data: any) {
   return request(`project/action/create`, {
     method: 'POST',
     data: {
-      project: '627740011002cc1fda5f4045',
+      project: '62787b49a94c9a84356d293c',
       event: 'action',
       extraBody: {
         token: window.localStorage.getItem('token'),
@@ -71,6 +93,15 @@ function pushAction(type: string, data: any) {
   });
 }
 
-export function debouncePushAction(type: string, data: any) {
-  debounce(() => pushAction(type, data), 500);
+export const debouncePushAction = debounce(pushAction, 500);
+
+// 邀请用户加入
+export async function inviteProjectUser(userId: string, projectId: string) {
+  return request(`project/member/invite`, {
+    method: 'POST',
+    data: {
+      user: userId,
+      project: projectId,
+    },
+  });
 }

@@ -1,5 +1,5 @@
 .container {
-  transition: all .2s ease-in;
+  transition: all 0.2s ease-in;
   width: 270px;
   height: calc(100vh - 86px);
   border-right: 1px solid #323436;
@@ -16,10 +16,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color:white;
+      color: white;
       font-size: 14px;
       transition: all 0.15s linear;
-      &:hover{
+      &:hover {
         opacity: 0.6;
         cursor: pointer;
       }
@@ -29,40 +29,40 @@
         margin-right: 6px;
       }
     }
-    .active{
-      color:#3183FF;
+    .active {
+      color: #3183ff;
     }
   }
-  .message{
+  .message {
     min-width: 246px;
 
-    .title{
+    .title {
       line-height: 38px;
       text-indent: 16px;
       color: white;
     }
-    .recordContainer{
+    .recordContainer {
       padding: 0 16px;
       height: calc(100vh - 268px);
       overflow-y: scroll;
-      .recordSection{
+      .recordSection {
         margin-bottom: 12px;
         display: flex;
-        .icon{
+        .icon {
           width: 48px;
-          img{
+          img {
             width: 48px;
             height: 48px;
             border-radius: 8px;
           }
         }
-        .content{
+        .content {
           flex: 1;
-          color:white;
-          .name{
+          color: white;
+          .name {
             margin-top: 4px;
           }
-          .text{
+          .text {
             margin-top: 4px;
             background: #323436;
             border-radius: 8px;
@@ -72,121 +72,76 @@
         }
       }
     }
-    .input{
+    .input {
       position: absolute;
       bottom: 30px;
       width: 100%;
       padding: 16px;
       background: #1b1c1d;
-      :global{
-        .ant-input{
+
+      :global {
+        .ant-input {
           background: #323436;
           border: 1px solid #323436;
-          &:focus{
+          color: white;
+          &:focus {
             box-shadow: none;
           }
         }
-        .ant-btn-icon-only{
+        .ant-btn-icon-only {
           background: #323436;
           border: 1px solid #323436;
+        }
+        .ant-btn {
+          color: white;
+          &:focus {
+            color: #40a9ff;
+          }
+          &:active {
+            color: #6971f8;
+          }
         }
       }
     }
   }
-  .meeting{
+  .meeting {
+    color: white;
     min-width: 254px;
     position: relative;
     height: calc(100vh - 132px);
-    .self{
+    .self {
       padding: 12px 16px;
       display: flex;
-      .left{
+      .left {
         width: 74px;
-        img{
+        img {
           width: 60px;
           height: 60px;
           border-radius: 16px;
         }
       }
-      .right{
+      .right {
         flex: 1;
-        .name{
+        .name {
           font-size: 16px;
         }
-        .tag{
+        .tag {
           margin-top: 8px;
-          span{
+
+          span {
             padding: 2px 12px;
             border-radius: 12px;
-            background: #EF37FF;
+            background: #ef37ff;
           }
-          span + span{
+          span + span {
             margin-left: 4px;
           }
-          .role{
-            background: #3183FF;
+          .role {
+            background: #3183ff;
           }
-        }
-      }
-    }
-    .add{
-      padding: 0 16px;
-      margin-top: 12px;
-      display: flex;
-      .inputBtn{
-        width: 40px;
-        margin-left: 8px;
-      }
-      .input{
-        flex: 1;
-      }
-    }
-    .members{
-      height: calc(100% - 250px);
-      overflow-y: auto;
-      section{
-        padding: 16px;
-        border-bottom: 1px solid #212020;
-        .top{
-          display: flex;
-          .left{
-            width: 48px;
-            img{
-              width: 40px;
-              height: 40px;
-              border-radius: 8px;
-            }
-          }
-          .right{
-            flex: 1;
-            .name{
-              font-size: 14px;
-              line-height: 18px;
-            }
-            .tag{
-              span{
-                font-size: 10px;
-                padding: 2px 6px;
-                border-radius: 12px;
-                background: #00E0FF;
-              }
-              span + span{
-                margin-left: 4px;
-              }
-              .role{
-                background: #3183FF;
-              }
-            }
-          }
-        }
-        .MBottom{
-          margin-top: 12px;
-          display: flex;
-          justify-content: space-between;
           img{
             width: 24px;
             cursor: pointer;
-            margin-right: 6px;
             &:hover{
               opacity: 0.6;
             }
@@ -194,19 +149,85 @@
         }
       }
     }
-    .meetingInfo{
+    .add {
+      padding: 0 16px;
+      margin-top: 12px;
+      display: flex;
+      .inputBtn {
+        width: 40px;
+        margin-left: 8px;
+      }
+      .input {
+        flex: 1;
+      }
+    }
+    .members {
+      height: calc(100% - 250px);
+      overflow-y: auto;
+      section {
+        padding: 16px;
+        border-bottom: 1px solid #212020;
+        .top {
+          display: flex;
+          .left {
+            width: 48px;
+            img {
+              width: 40px;
+              height: 40px;
+              border-radius: 8px;
+            }
+          }
+          .right {
+            flex: 1;
+            .name {
+              font-size: 14px;
+              line-height: 18px;
+            }
+            .tag {
+              span {
+                font-size: 10px;
+                padding: 2px 6px;
+                border-radius: 12px;
+                background: #00e0ff;
+              }
+              span + span {
+                margin-left: 4px;
+              }
+              .role {
+                background: #3183ff;
+              }
+            }
+          }
+        }
+        .MBottom {
+          margin-top: 12px;
+          display: flex;
+          justify-content: space-between;
+          img {
+            width: 24px;
+            cursor: pointer;
+            margin-right: 6px;
+            &:hover {
+              opacity: 0.6;
+            }
+          }
+        }
+      }
+    }
+    .meetingInfo {
       width: 100%;
       position: absolute;
       bottom: 30px;
       padding: 16px;
-      h5{
+      h5 {
         margin-top: 6px;
         text-align: center;
         line-height: 32px;
+        color: white;
       }
     }
   }
-  .bottom{
+  .bottom {
     position: absolute;
     width: 100%;
     bottom: 0;
@@ -214,16 +235,14 @@
     height: 30px;
     line-height: 30px;
     right: 16px;
-    z-index:999;
-    :hover{
+    z-index: 999;
+    :hover {
       cursor: pointer;
       opacity: 0.6;
     }
-    img{
+    img {
       width: 20px;
-      transition: all .3s linear;
+      transition: all 0.3s linear;
     }
   }
-
 }
-

@@ -1,52 +1,22 @@
 import styles from './index.less'
-import {useEffect, useRef, useState} from "react";
+import {FC, useEffect, useRef, useState} from "react";
 import {AudioOutlined} from '@ant-design/icons';
 import {Button, Input} from "antd";
 
-interface record {
-  content?: string,
-  isSelf?: boolean,
-  id:string|number
+interface IMessage{
+  records:Array<API.messageRecord>,
+  send:(val:string)=>void
 }
-
-const Message = () => {
-  const RTCRef =  useRef<any>()
-  useEffect(()=>{
-    RTCRef.current = new RTCMultiConnection() as any;
-    // RTCRef.current.socketURL = 'https://muazkhan.com:9001/';
-    RTCRef.current.socketURL = 'http://8.218.125.220:9001/';
-
-    RTCRef.current.session = {
-      data: true
-    };
-    RTCRef.current.extra  = {
-      fullName: 'test',
-    };
-    RTCRef.current.onopen = function() {
-    };
-    RTCRef.current.onmessage = function(event:any) {
-      console.log(event)
-      setRecords((records)=>{
-        return [...records,{id:generateId(),content:event.data,isSelf:false}]
-      })
-    };
-    RTCRef.current.openOrJoin('ttxxxiidd-12');
-  },[])
-  const [records, setRecords] = useState<record[]>([])
+const Message:FC<IMessage> = (props) => {
+  const {records,send} = props
   const [inputValue,setInputValue] = useState('')
   const msgRef = useRef<HTMLDivElement>(null)
-  // generate id
-  const generateId = ()=>{
-    return new Date().getTime()+ parseInt((Math.random()*10000).toString())
-  }
+
   // 按下enter键
   const onPressEnter = (e:any)=>{
     const value = e.target.value;
     if(value){
-      setRecords((records)=>{
-        return [...records,{id:generateId(),content:value,isSelf:true}]
-      })
-      RTCRef.current.send(value);
+      send(value)
       setInputValue('')
     }
   }
@@ -70,7 +40,7 @@ const Message = () => {
               </div>
               <div className={styles.icon} >
                 <img
-                  src={'https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fup.enterdesk.com%2Fedpic_source%2F30%2F90%2F40%2F309040a0602c672cebc6ab3a1bbbc8cd.jpg&refer=http%3A%2F%2Fup.enterdesk.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654096865&t=7ceb88d80bf8b91c4f15b7d9ac60cbce'}
+                  src={r.avatar}
                   alt='icon'/>
               </div>
             </section>
@@ -78,11 +48,11 @@ const Message = () => {
             return <section className={styles.recordSection} key={r.id}>
               <div className={styles.icon}>
                 <img
-                  src={'https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fup.enterdesk.com%2Fedpic_source%2F30%2F90%2F40%2F309040a0602c672cebc6ab3a1bbbc8cd.jpg&refer=http%3A%2F%2Fup.enterdesk.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654096865&t=7ceb88d80bf8b91c4f15b7d9ac60cbce'}
+                  src={r.avatar}
                   alt='icon'/>
               </div>
               <div className={styles.content} style={{marginLeft: '8px'}}>
-                <div className={styles.name}>David</div>
+                <div className={styles.name}>{r.name}</div>
                 <div className={styles.text}>
                   {r.content}
                 </div>

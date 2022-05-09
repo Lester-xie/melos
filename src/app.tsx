@@ -1,4 +1,5 @@
 import type { RequestConfig } from 'umi';
+import { apiPrefix } from '@/config';
 import { notification } from 'antd';
 
 const getTypeToken = () => {
@@ -7,7 +8,7 @@ const getTypeToken = () => {
   return Token;
 };
 export const request: RequestConfig = {
-  prefix: 'https://www.metaapp.fun/api/v1/',
+  prefix: apiPrefix,
   errorHandler: (error: any) => {
     const { response, data } = error;
     if (!response) {
@@ -36,7 +37,8 @@ export const request: RequestConfig = {
       const { req } = ctx;
       const { options } = req;
       options.headers = {
-        'X-Requested-With': 'XMLHttpRequest',
+        Accept: 'application/json',
+        'Content-Type': 'application/json; charset=UTF-8',
         Authorization: getTypeToken(),
       };
       await next();

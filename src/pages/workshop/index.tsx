@@ -2,18 +2,44 @@ import styles from './index.less';
 import TopLeftBar from '@/components/topLeftBar';
 import Chat from '@/components/chat';
 import Workspace from '@/components/workspace';
-import { useState } from 'react';
-import { Login } from '@/services/api';
+import { FC, useState } from 'react';
+import { Login, getMemberList } from '@/services/api';
+import { GlobalModelState, ConnectProps, Loading, connect } from 'umi';
 
-export default function IndexPage() {
+interface IndexProps extends ConnectProps {
+  global: GlobalModelState;
+  loading: boolean;
+}
+
+const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
   const [activeUser, setActiveUser] = useState('');
   const [token, setToken] = useState(window.localStorage.getItem('token'));
   const onBtnClicked = (name: string) => {
     setActiveUser(name);
     Login(name).then((res: any) => {
       if (res.code === 0) {
-        window.localStorage.setItem('token', res.data.token);
         setToken(res.data.token);
+        window.localStorage.setItem('token', res.data.token);
+        const user = JSON.stringify({
+          name: res.data.name,
+          id: res.data._id,
+          avatar: res.data?.avatar?.url,
+        });
+        window.localStorage.setItem('user', user);
+        getMemberList('62787b49a94c9a84356d293c')
+          .then((res) => {
+            if (res.code === 0 && dispatch) {
+              dispatch({
+                type: 'global/save',
+                payload: {
+                  memberList: res.data.result,
+                },
+              });
+            }
+          })
+          .catch((e) => {
+            console.log(e);
+          });
       }
     });
   };
@@ -25,22 +51,16 @@ export default function IndexPage() {
         <div className={styles.mintWrap}>
           <div className={styles.userGroup}>
             <button
-              className={activeUser === 'user1' ? styles.active : null}
-              onClick={() => onBtnClicked('user1')}
+              className={activeUser === 'Tom' ? styles.active : null}
+              onClick={() => onBtnClicked('Tom')}
             >
-              User 1
+              Tom
             </button>
             <button
-              className={activeUser === 'user2' ? styles.active : null}
-              onClick={() => onBtnClicked('user2')}
+              className={activeUser === 'Jerry' ? styles.active : null}
+              onClick={() => onBtnClicked('Jerry')}
             >
-              User 2
-            </button>
-            <button
-              className={activeUser === 'user3' ? styles.active : null}
-              onClick={() => onBtnClicked('user3')}
-            >
-              User 3
+              Jerry
             </button>
           </div>
           <button className={styles.mint}>Mint NFT</button>
@@ -53,4 +73,11 @@ export default function IndexPage() {
       </main>
     </div>
   );
-}
+};
+
+export default connect(
+  ({ global, loading }: { global: GlobalModelState; loading: Loading }) => ({
+    global,
+    loading: loading.models.global,
+  }),
+)(IndexPage);

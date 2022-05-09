@@ -48,10 +48,6 @@ export default function Workspace({ token }: Props) {
   };
 
   useEffect(() => {
-    setSocket(io(`https://www.metaapp.fun?token=${token}`));
-  }, [token]);
-
-  useEffect(() => {
     setToneCtx(Tone.getContext());
   }, []);
 
@@ -167,12 +163,17 @@ export default function Workspace({ token }: Props) {
   };
 
   useEffect(() => {
+    socket?.disconnect();
+    setSocket(io(`https://www.metaapp.fun?token=${token}`));
+  }, [token]);
+
+  useEffect(() => {
     if (socket && playContext) {
-      socket.removeAllListeners('action');
+      socket.removeAllListeners();
       socket.on('action', (arg: any) => {
         const { type, token: actionToken, data } = arg.extraBody;
-        if (actionToken !== token) {
-          console.log(123);
+        const localStorageToken = window.localStorage.getItem('token');
+        if (actionToken !== localStorageToken) {
           switch (type) {
             case 'addTrack': {
               playContext.load([data]).then(() => {
@@ -206,10 +207,6 @@ export default function Workspace({ token }: Props) {
       });
     }
   }, [socket, playContext, trackList]);
-
-  useEffect(() => {
-    console.log(trackList);
-  }, [trackList]);
 
   return (
     <div className={styles.container}>
