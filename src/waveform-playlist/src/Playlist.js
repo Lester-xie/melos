@@ -331,17 +331,61 @@ export default class {
     });
 
     ee.on('trim', () => {
-      const track = this.getActiveTrack();
-      if (!track) {
+      const activeTrack = this.getActiveTrack();
+      if (!activeTrack) {
         return;
       }
-      const timeSelection = this.getTimeSelection();
+      const { start, end } = this.getTimeSelection();
+      const sampleRate = activeTrack.buffer.sampleRate;
+      const startIdx = secondsToSamples(start, sampleRate);
+      const endIdx = secondsToSamples(end, sampleRate);
 
-      track.trim(timeSelection.start, timeSelection.end);
-      track.calculatePeaks(this.samplesPerPixel, this.sampleRate);
+      const activeAudioBuffer = activeTrack.buffer;
+
+      const len = activeAudioBuffer.length;
+      const numberOfChannels = activeAudioBuffer.numberOfChannels;
+      const newBuffer = this.ac.createBuffer(
+        numberOfChannels,
+        len - (endIdx - startIdx),
+        sampleRate,
+      );
+
+      for (var channel = 0; channel < numberOfChannels; channel++) {
+        var oldBuffering = activeAudioBuffer.getChannelData(channel);
+        var newBuufering = newBuffer.getChannelData(channel);
+
+        // 填充 选择区域前面的数据
+        let newBufferIdx = 0;
+        for (var i = 0; i < startIdx; i++) {
+          newBuufering[newBufferIdx] = oldBuffering[i];
+          newBufferIdx++;
+        }
+
+        // 填充 选择区域后面的数据
+        for (var i = endIdx; i < len; i++) {
+          newBuufering[newBufferIdx] = oldBuffering[i];
+          newBufferIdx++;
+        }
+      }
+      this.selection;
+
+      activeTrack.setBuffer(newBuffer);
+      activeTrack.setCues(0, newBuffer.duration); //必不可少，否则频谱图不会变
+      activeTrack.calculatePeaks(this.samplesPerPixel, sampleRate);
+      // webaudio specific playout for now.
+      const playout = new Playout(this.ac, newBuffer, this.masterGainNode);
+      activeTrack.setPlayout(playout);
 
       this.setTimeSelection(0, 0);
+      this.adjustDuration();
       this.drawRequest();
+      this.draw(this.render());
+
+      // track.trim(timeSelection.start, timeSelection.end);
+      // track.calculatePeaks(this.samplesPerPixel, this.sampleRate);
+
+      // this.setTimeSelection(0, 0);
+      // this.drawRequest();
     });
 
     ee.on('copy', () => {

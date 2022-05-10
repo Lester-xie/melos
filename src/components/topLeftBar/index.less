@@ -64,6 +64,7 @@
   }
 }
 .project{
+
   .search{
     padding: 16px 16px 0 16px;
   }
@@ -75,18 +76,26 @@
     }
   }
   .projectItems{
+    min-height: 200px;
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
     section{
       position: relative;
       border-bottom: 1px solid #212020;
       padding: 16px;
+      cursor: pointer;
       &:hover{
         background: #3183FF;
         .options{
           opacity: 1;
           cursor: pointer;
-          &:hover{
-            transform: scale(1.2);
-          }
+
+        }
+      }
+      img{
+        &:hover{
+          transform: scale(1.2);
         }
       }
       .content{
@@ -105,7 +114,6 @@
       }
       .options{
         position: absolute;
-        width: 50px;
         height: 100%;
         align-items: center;
         justify-content: center;
@@ -116,6 +124,7 @@
         transition: all 0.15s linear;
         img{
           width: 20px;
+          margin-right: 5px;
         }
       }
     }

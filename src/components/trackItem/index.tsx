@@ -6,6 +6,7 @@ import styles from './index.less';
 import { ReactComponent as IconPlay } from '@/assets/icons/icon_play.svg';
 import { Popconfirm } from 'antd';
 import { debouncePushAction } from '@/services/api';
+import { useSelector } from 'umi';
 
 interface Props {
   trackItem: any;
@@ -25,19 +26,34 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
   const [gain, setGain] = useState<number>(100);
   const [stereopan, setStereopan] = useState<number>(0);
 
+  // @ts-ignore
+  const currentProject: { name: string; id: string } = useSelector(
+    (state) => state.global.project,
+  );
+
   const onMute = useCallback(() => {
     trackItem.ee.emit('mute', trackItem);
     setMuted(!muted);
+    debouncePushAction(currentProject.id, 'changeMute', { index });
   }, [trackItem, muted]);
 
   const onSoloToggle = useCallback(() => {
     trackItem.ee.emit('solo', trackItem);
     setSolo(!solo);
+    debouncePushAction(currentProject.id, 'changeSolo', { index });
   }, [trackItem, solo]);
 
   useEffect(() => {
     setGain(trackItem?.gain * 100);
   }, [trackItem?.gain]);
+
+  useEffect(() => {
+    setMuted(trackItem?.mute);
+  }, [trackItem?.mute]);
+
+  useEffect(() => {
+    setSolo(trackItem?.solo);
+  }, [trackItem?.solo]);
 
   useEffect(() => {
     setStereopan(trackItem?.stereoPan * 100);
@@ -47,7 +63,7 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
     (value: number) => {
       setGain(value);
       trackItem.ee.emit('volumechange', value, trackItem);
-      debouncePushAction('changeVolume', { value, index });
+      debouncePushAction(currentProject.id, 'changeVolume', { value, index });
     },
     [trackItem],
   );
@@ -56,7 +72,10 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
     (value: number) => {
       setStereopan(value);
       trackItem.ee.emit('stereopan', value / 100, trackItem);
-      debouncePushAction('changeStereopan', { value, index });
+      debouncePushAction(currentProject.id, 'changeStereopan', {
+        value,
+        index,
+      });
     },
     [trackItem],
   );

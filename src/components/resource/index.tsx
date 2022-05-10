@@ -8,10 +8,12 @@ import {
   fetchPresigned,
   uploadAudio,
   fetchTagList,
+  fetchUploadList,
 } from '@/services/api';
 import useAsync from '@/hooks/useAsync';
 import { cloneDeep } from 'lodash';
 import { Spin } from 'antd';
+import { useSelector } from 'umi';
 
 type Tab = 'cloud' | 'local';
 
@@ -38,6 +40,20 @@ const useTags = () => {
     list: data,
   };
 };
+
+function formatTime(time: string) {
+  const date = new Date(time);
+  return `${date.getFullYear()}-${addZero(date.getMonth() + 1)}-${addZero(
+    date.getDate(),
+  )} ${date.getHours()}:${date.getMinutes()}`;
+}
+
+function addZero(number: number) {
+  if (number < 10) {
+    return `0${number}`;
+  }
+  return number;
+}
 
 export default function Resource(props: Props) {
   const [tab, setTab] = useState<Tab>('local');
@@ -102,6 +118,23 @@ export default function Resource(props: Props) {
   ]);
   const [searchResultList, setSearchResultList] = useState<any>([]);
   const [loading, setLoading] = useState(false);
+  const [historyList, setHistoryList] = useState([]);
+
+  // @ts-ignore
+  const currentProject: { name: string; id: string } = useSelector(
+    (state) => state.global.project,
+  );
+
+  useEffect(() => {
+    if (currentProject.id && tab === 'local') {
+      fetchUploadList(currentProject.id).then((res) => {
+        if (res.code === 0) {
+          setHistoryList(res.data.result);
+        }
+      });
+    }
+  }, [tab, currentProject]);
+
   // const { tagList } = useTags()
   const onCloseBtnClicked = useCallback(() => {
     props.onClose();
@@ -133,6 +166,16 @@ export default function Resource(props: Props) {
       {
         src: item.src,
         name: item.name,
+      },
+      'cloud',
+    );
+  };
+
+  const onHistoryItemClicked = (item: any) => {
+    props.onSelect(
+      {
+        src: item.url,
+        name: item.name || 'test.mp3',
       },
       'cloud',
     );
@@ -218,7 +261,7 @@ export default function Resource(props: Props) {
     const formdata = new FormData();
     formdata.append('', file, token);
     await uploadAudio(uploadLink, formdata);
-    const res = await createAsset(token);
+    const res = await createAsset(token, currentProject.id, fileName);
     if (res.code === 0) {
       const data = res.data.result;
       props.onSelect(
@@ -230,6 +273,11 @@ export default function Resource(props: Props) {
       );
     }
     setLoading(false);
+    fetchUploadList(currentProject.id).then((res) => {
+      if (res.code === 0) {
+        setHistoryList(res.data.result);
+      }
+    });
   };
 
   const renderLocal = () => {
@@ -254,6 +302,21 @@ export default function Resource(props: Props) {
           onChange={onFileChange}
           accept=".mp3,.wav"
         />
+        <div className={styles.historyWrap}>
+          <div className={styles.historyTitle}>History Upload</div>
+          <ul>
+            {historyList.map((item: any) => (
+              <div
+                className={styles.historyItem}
+                onClick={() => onHistoryItemClicked(item)}
+                key={item.url}
+              >
+                <div>{item.name || 'test.mp3'}</div>
+                <div>{formatTime(item.updatedAt)}</div>
+              </div>
+            ))}
+          </ul>
+        </div>
       </div>
     );
   };

@@ -21,6 +21,7 @@ import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
 import { debouncePushAction } from '@/services/api';
+import { useSelector } from 'umi';
 
 type State = 'cursor' | 'select';
 
@@ -36,6 +37,11 @@ export default function Workspace({ token }: Props) {
   const [isNoneState, setIsNoneState] = useState(false);
   const [socket, setSocket] = useState<any>(null);
 
+  // @ts-ignore
+  const currentProject: { name: string; id: string } = useSelector(
+    (state) => state.global.project,
+  );
+
   const onFileSelect = (file: any, type: 'cloud' | 'local') => {
     setIsNoneState(false);
     playContext.load([file]).then(() => {
@@ -44,7 +50,7 @@ export default function Workspace({ token }: Props) {
     if (type === 'local') {
       setShowResource(false);
     }
-    debouncePushAction('addTrack', file);
+    debouncePushAction(currentProject.id, 'addTrack', file);
   };
 
   useEffect(() => {
@@ -149,7 +155,7 @@ export default function Workspace({ token }: Props) {
     ee.emit('removeTrack', playContext.tracks[index]);
     setTrackList([...playContext.tracks]);
     setIsNoneState(playContext.tracks.length === 0);
-    debouncePushAction('removeTrack', { index });
+    debouncePushAction(currentProject.id, 'removeTrack', { index });
   };
 
   const onCopyBtnClicked = () => {
@@ -198,6 +204,20 @@ export default function Workspace({ token }: Props) {
               ee.emit('stereopan', data.value, trackList[data.index]);
               const newTrackList = cloneDeep(trackList);
               newTrackList[data.index].stereoPan = data.value / 100;
+              setTrackList([...newTrackList]);
+              break;
+            }
+            case 'changeMute': {
+              ee.emit('mute', playContext.tracks[data.index]);
+              const newTrackList = cloneDeep(trackList);
+              newTrackList[data.index].mute = !newTrackList[data.index].mute;
+              setTrackList([...newTrackList]);
+              break;
+            }
+            case 'changeSolo': {
+              ee.emit('solo', playContext.tracks[data.index]);
+              const newTrackList = cloneDeep(trackList);
+              newTrackList[data.index].solo = !newTrackList[data.index].solo;
               setTrackList([...newTrackList]);
               break;
             }

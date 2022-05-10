@@ -9,13 +9,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useDispatch, useSelector, GlobalModelState } from 'umi';
+import { useDispatch, useSelector } from 'umi';
 import { socketPrefix } from '@/config';
-import {
-  delProjectMemberAPI,
-  getMemberList,
-  inviteProjectUser,
-} from '@/services/api';
+import { inviteProjectUser } from '@/services/api';
 const { TabPane } = Tabs;
 
 const generateId = () => {
@@ -23,12 +19,13 @@ const generateId = () => {
 };
 const CustomTab = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const [active, setActive] = useState('meeting');
+  const [active, setActive] = useState('discuss');
   const [records, setRecords] = useState<API.messageRecord[]>([]);
   const [localStreamId, setLocalStreamId] = useState('');
 
-  const globalState: GlobalModelState = useSelector(
-    (state: any) => state.global,
+  // @ts-ignore
+  const memberList: Array<API.MemberType> = useSelector(
+    (state) => state.global.memberList,
   );
   const dispatch = useDispatch();
   const RTCRef = useRef<any>();
@@ -58,34 +55,74 @@ const CustomTab = () => {
     [memberRef],
   );
 
-  useEffect(() => {
-    memberRef.current = globalState.memberList;
-  }, [globalState.memberList]);
-
   const muteOrUnMuteCallback = useCallback(
     (event: any) => {
-      console.log(event, 'mute or unmute');
       const { extra, isAudioMuted } = event;
       const userId = extra.userId;
-      const muteIds = [...globalState.muteMembersIds];
-      let ids: Array<string> = [];
-      if (isAudioMuted) {
-        const muteSet = new Set(muteIds);
-        muteSet.add(userId);
-        ids = Array.from(muteSet);
-      } else {
-        ids = muteIds.filter((m) => m !== userId);
+      const newMembers = [...memberRef.current];
+      for (let m of newMembers) {
+        if (m.user._id === userId) {
+          m.isMute = isAudioMuted;
+        }
       }
-
       dispatch({
         type: 'global/save',
         payload: {
-          muteMembersIds: ids,
+          memberList: newMembers,
         },
       });
     },
     [memberRef],
   );
+
+  useEffect(() => {
+    memberRef.current = memberList;
+  }, [memberList]);
+  useLayoutEffect(() => {
+    RTCRef.current = new RTCMultiConnection() as any;
+    RTCRef.current.socketURL = socketPrefix;
+
+    RTCRef.current.session = {
+      data: true,
+      audio: true,
+      video: false,
+    };
+    RTCRef.current.mediaConstraints = {
+      audio: true,
+      video: false,
+    };
+    RTCRef.current.extra = {
+      userId: user.id,
+    };
+    RTCRef.current.onopen = function () {
+      // RTCRef.current.send('hello every one')
+    };
+    RTCRef.current.onmute = muteOrUnMuteCallback;
+    RTCRef.current.onunmute = muteOrUnMuteCallback;
+    RTCRef.current.onmessage = callback;
+    RTCRef.current.onstream = function (event: any) {
+      const { type, extra, stream } = event;
+      if (type === 'remote') {
+        const userId = extra.userId;
+        const members = [...memberList];
+        for (let m of members) {
+          if (m.user._id === userId) {
+            m.isMute = !stream.isAudio;
+            m.isInMeeting = !stream.isAudio;
+          }
+        }
+        dispatch({
+          type: 'global/save',
+          payload: {
+            memberList: members,
+          },
+        });
+      } else if (type === 'local') {
+        setLocalStreamId(stream.streamid);
+      }
+    };
+    RTCRef.current.openOrJoin('ttxxxiidd-12');
+  }, []);
 
   const toggleMute = (bol: boolean) => {
     if (bol) {
@@ -107,97 +144,10 @@ const CustomTab = () => {
 
   // inviteMember
   const inviteUser = async (userId: string) => {
-    const res = await inviteProjectUser(userId, globalState.project.id);
+    const res = await inviteProjectUser(userId, '62772302849c463fe6acda53');
     if (res.code === 0) {
       message.success('invited success');
-      getMemberList(globalState.project.id).then((res) => {
-        dispatch({
-          type: 'global/save',
-          payload: {
-            memberList: res.data.result,
-          },
-        });
-      });
     }
-  };
-
-  // 刪除用戶
-  const delMember = (id: string) => {
-    delProjectMemberAPI(id, globalState.project.id)
-      .then((res) => {
-        console.log(res);
-      })
-      .catch((e) => {
-        console.log(e);
-      });
-  };
-  // 拉起房间
-  const goCreateOrJoinRoom = () => {
-    if (globalState.roomId) {
-      message.warning('room had been created').then();
-      return;
-    }
-    const roomId = `${globalState.project.id}-audio-room`;
-    RTCRef.current = new RTCMultiConnection() as any;
-    RTCRef.current.socketURL = socketPrefix;
-    RTCRef.current.session = {
-      data: true,
-      audio: true,
-      video: false,
-    };
-    RTCRef.current.mediaConstraints = {
-      audio: true,
-      video: false,
-    };
-    RTCRef.current.extra = {
-      userId: user.id,
-    };
-    RTCRef.current.onopen = function () {
-      // RTCRef.current.send('hello every one')
-      console.log(11111, 'room open...');
-    };
-    RTCRef.current.onmute = muteOrUnMuteCallback;
-    RTCRef.current.onunmute = muteOrUnMuteCallback;
-    RTCRef.current.onmessage = callback;
-    RTCRef.current.onstream = function (event: any) {
-      const { type, extra, stream } = event;
-      if (type === 'local') {
-        setLocalStreamId(stream.streamid);
-      }
-      const userId = extra.userId;
-      const { isAudio } = stream;
-      if (!isAudio) {
-        //mute add
-        let muteSet = new Set(globalState.muteMembersIds);
-        muteSet.add(userId);
-        const arr = Array.from(muteSet);
-        dispatch({
-          type: 'global/save',
-          payload: {
-            muteMembersIds: arr,
-          },
-        });
-      }
-      let onlineMemberIdsSet = new Set(globalState.onlineMemberIds);
-      onlineMemberIdsSet.add(userId);
-      const onlineMembers = Array.from(onlineMemberIdsSet);
-      dispatch({
-        type: 'global/save',
-        payload: {
-          onlineMemberIds: onlineMembers,
-        },
-      });
-    };
-
-    RTCRef.current.openOrJoin(roomId);
-    message.success('Join Room success').then();
-    dispatch({
-      type: 'global/save',
-      payload: {
-        roomId,
-        onlineMemberIds: [user.id],
-      },
-    });
   };
   return (
     <Tabs
@@ -236,16 +186,18 @@ const CustomTab = () => {
         );
       }}
     >
-      <TabPane tab="meeting" key="meeting">
-        <Meeting
-          inviteUser={inviteUser}
-          toggleMute={toggleMute}
-          delMember={delMember}
-          goCreateOrJoinRoom={goCreateOrJoinRoom}
-        />
-      </TabPane>
       <TabPane tab="discuss" key="discuss">
-        {globalState.roomId && <Message records={records} send={sendMsg} />}
+        {memberList.length > 0 && <Message records={records} send={sendMsg} />}
+        {/*<Message />*/}
+      </TabPane>
+      <TabPane tab="meeting" key="meeting">
+        {memberList.length > 0 && (
+          <Meeting
+            memberList={memberList}
+            inviteUser={inviteUser}
+            toggleMute={toggleMute}
+          />
+        )}
       </TabPane>
     </Tabs>
   );

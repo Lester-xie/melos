@@ -61,3 +61,6 @@ button {
   border-radius: 10px;
   background: #1b1c1d;
 }
+.ant-tooltip {
+  z-index: 800;
+}

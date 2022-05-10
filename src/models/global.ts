@@ -1,7 +1,14 @@
 import { Effect, Reducer, Subscription } from 'umi';
 
 export interface GlobalModelState {
-  memberList: Array<API.User>;
+  memberList: Array<API.MemberType>,
+  project:{
+    name:string,
+    id:string
+  },
+  roomId:string,
+  muteMembersIds:Array<string>,
+  onlineMemberIds:Array<string>,
 }
 
 export interface GlobalModelType {
@@ -21,6 +28,13 @@ const GlobalModel: GlobalModelType = {
 
   state: {
     memberList: [],
+    project:{
+      name:'',
+      id:''
+    },
+    roomId:'',
+    muteMembersIds:[],
+    onlineMemberIds:[]
   },
 
   effects: {

@@ -49,6 +49,37 @@
     display: none;
   }
 
+  .historyWrap {
+    height: calc(100vh - 264px);
+    overflow-y: auto;
+    .historyTitle {
+      height: 48px;
+      line-height: 48px;
+      color: white;
+      padding: 16px;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+
+      .historyItem {
+        padding: 16px;
+        color: white;
+        box-shadow: inset 0px -1px 0px 1px rgba(255, 255, 255, 0.1);
+        cursor: pointer;
+
+        > div:first-child {
+          font-size: 16px;
+          font-family: Helvetica-Bold, Helvetica;
+          font-weight: bold;
+          margin-bottom: 12px;
+        }
+      }
+    }
+  }
+
   .cloudWrap {
     height: calc(100vh - 142px);
     overflow-y: auto;

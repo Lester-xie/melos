@@ -3,9 +3,10 @@ import TopLeftBar from '@/components/topLeftBar';
 import Chat from '@/components/chat';
 import Workspace from '@/components/workspace';
 import { FC, useState } from 'react';
-import { Login, getMemberList } from '@/services/api';
+import { Login, updateProjectNameAPI } from '@/services/api';
 import { GlobalModelState, ConnectProps, Loading, connect } from 'umi';
-
+import { Input, message, Popover } from 'antd';
+const { Search } = Input;
 interface IndexProps extends ConnectProps {
   global: GlobalModelState;
   loading: boolean;
@@ -13,6 +14,8 @@ interface IndexProps extends ConnectProps {
 
 const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
   const [activeUser, setActiveUser] = useState('');
+  const [projectNameFlag, setProjectNameFlag] = useState(false);
+  const { project: currentProject } = global;
   const [token, setToken] = useState(window.localStorage.getItem('token'));
   const onBtnClicked = (name: string) => {
     setActiveUser(name);
@@ -26,20 +29,32 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
           avatar: res.data?.avatar?.url,
         });
         window.localStorage.setItem('user', user);
-        getMemberList('62787b49a94c9a84356d293c')
-          .then((res) => {
-            if (res.code === 0 && dispatch) {
-              dispatch({
-                type: 'global/save',
-                payload: {
-                  memberList: res.data.result,
-                },
-              });
-            }
-          })
-          .catch((e) => {
-            console.log(e);
-          });
+      }
+    });
+  };
+
+  const changeProjectNameFlagChange = (v: boolean) => {
+    if (!currentProject.name) {
+      return;
+    }
+    setProjectNameFlag(v);
+  };
+
+  const onProjectNameEdit = (value: string) => {
+    if (!value) return;
+    updateProjectNameAPI(currentProject.id, value).then((res) => {
+      if (res.code === 0) {
+        setProjectNameFlag(false);
+        message.success('Update success').then();
+        dispatch?.({
+          type: 'global/save',
+          payload: {
+            project: {
+              name: value,
+              id: currentProject.id,
+            },
+          },
+        });
       }
     });
   };
@@ -57,16 +72,43 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
               Tom
             </button>
             <button
-              className={activeUser === 'Jerry' ? styles.active : null}
-              onClick={() => onBtnClicked('Jerry')}
+              className={activeUser === 'Lester' ? styles.active : null}
+              onClick={() => onBtnClicked('Lester')}
             >
-              Jerry
+              Lester
+            </button>
+            <button
+              className={activeUser === 'David' ? styles.active : null}
+              onClick={() => onBtnClicked('David')}
+            >
+              David
             </button>
           </div>
           <button className={styles.mint}>Mint NFT</button>
         </div>
       </header>
-      <div className={styles.projectName}>Project Name</div>
+      {/*<div className={styles.projectName}>{currentProject.name||'Please create new project'}</div>*/}
+      <div className={styles.projectName}>
+        <Popover
+          content={
+            <Search
+              placeholder="project name"
+              style={{ width: 200 }}
+              defaultValue={currentProject.name}
+              onSearch={onProjectNameEdit}
+              enterButton={'Send'}
+            />
+          }
+          title="Change project Name"
+          trigger="click"
+          visible={projectNameFlag}
+          onVisibleChange={(v) => {
+            changeProjectNameFlagChange(v);
+          }}
+        >
+          {currentProject.name || 'Please select one project'}
+        </Popover>
+      </div>
       <main>
         <Chat />
         <Workspace token={token} />

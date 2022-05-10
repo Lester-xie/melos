@@ -32,4 +32,13 @@ declare namespace API {
     isInMeeting?:boolean
     [key: string]: any;
   };
+
+  type ProjectType = {
+    deleted: boolean
+    name: string
+    owner: {_id: string}
+    _id: string,
+    updatedAt: string,
+    [key:string]:any
+  }
 }

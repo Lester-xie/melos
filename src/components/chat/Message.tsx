@@ -65,13 +65,14 @@ const Message:FC<IMessage> = (props) => {
     <div className={styles.input}>
       <Input.Group compact>
         <Input
-          style={{ width: 'calc(100% - 32px)' }}
+          // style={{ width: 'calc(100% - 32px)' }}
+          style={{ width: '100%' }}
           placeholder='input text or voice'
           value={inputValue}
           onChange={(e)=>{setInputValue(e.target.value)}}
           onPressEnter={(e)=>onPressEnter(e)}
         />
-         <Button icon={<AudioOutlined />} />
+         {/*<Button icon={<AudioOutlined />} />*/}
       </Input.Group>
     </div>
   </div>

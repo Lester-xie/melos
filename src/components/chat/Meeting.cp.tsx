@@ -1,5 +1,5 @@
+import styles from './index.less';
 import { Select, Button } from 'antd';
-import { GlobalModelState, useSelector } from 'umi';
 import { PlusOutlined } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import callVoice from '../../assets/chat/call_voice.png';
@@ -9,59 +9,49 @@ import unmute from '../../assets/chat/unmute.png';
 import tick from '../../assets/chat/tick.png';
 import { getUserList } from '@/services/api';
 import defaultImg from '../../assets/chat/default.png';
-import styles from './index.less';
 
 interface IMeeting {
+  memberList: Array<API.MemberType>;
   inviteUser: (id: string) => void;
   toggleMute: (flag: boolean) => void;
-  delMember: (id: string) => void;
-  goCreateOrJoinRoom: () => void;
 }
 
 const { Option } = Select;
 const Meeting: React.FC<IMeeting> = (props) => {
-  const { toggleMute, delMember, goCreateOrJoinRoom } = props;
+  const { memberList, toggleMute } = props;
   const [userList, setUserList] = useState([]);
   const [selectValue, setSelectValue] = useState('123');
-  const globalState: GlobalModelState = useSelector(
-    (state: any) => state.global,
-  );
   const [selfUser, setSelfUser] = useState<any>({
     user: {
       name: '',
       avatar: { url: '' },
     },
-    isMute: true,
+    isMute: false,
     role: '',
   });
+  const self = JSON.parse(localStorage.getItem('user') || '{}');
 
   useEffect(() => {
-    const self = JSON.parse(localStorage.getItem('user') || '{}');
-    if (globalState.memberList.length > 0) {
-      const me = globalState.memberList.find((m) => m.user._id === self.id);
-      if (me) {
-        setSelfUser(me);
-      }
+    onInputChange('').then();
+    const me = memberList.find((m) => m.user._id === self.id);
+    if (me) {
+      setSelfUser(me);
     }
-  }, [globalState.memberList]);
+  }, []);
 
   const muteMyself = () => {
     toggleMute(true);
+    setSelfUser((u: any) => {
+      return { ...u, isMute: true };
+    });
     selfUser.isMute = true;
-  };
-
-  // 刪除項目成員
-  const delMemberUser = (id: string) => {
-    delMember(id);
-  };
-
-  // 拉起一个房间
-  const createOrJoinRoom = () => {
-    goCreateOrJoinRoom();
   };
 
   const unMuteMyself = () => {
     toggleMute(false);
+    setSelfUser((u: any) => {
+      return { ...u, isMute: false };
+    });
   };
 
   const onInputChange = async (e: string) => {
@@ -93,13 +83,12 @@ const Meeting: React.FC<IMeeting> = (props) => {
         <div className={styles.right}>
           <div className={styles.name}>{selfUser.user.name}</div>
           <div className={styles.tag}>
-            {globalState.muteMembersIds.includes(selfUser.user._id) ? (
+            {/*<span>Drummer</span>*/}
+            {selfUser.isMute ? (
               <img src={mute} alt="callVoice" onClick={unMuteMyself} />
             ) : (
-              <img src={unmute} alt="callInvite" onClick={muteMyself} />
+              <img src={unmute} alt="callVoice" onClick={muteMyself} />
             )}
-            {/*<span>Drummer</span>*/}
-
             <span className={styles.role}>{selfUser.role}</span>
           </div>
         </div>
@@ -133,8 +122,8 @@ const Meeting: React.FC<IMeeting> = (props) => {
         </div>
       </div>
       <div className={[styles.members, 'customScroll'].join(' ')}>
-        {globalState.memberList
-          .filter((m) => m.user._id !== selfUser.user._id)
+        {memberList
+          .filter((m) => m.user._id !== self.id)
           .map((m) => {
             return (
               <section key={m._id}>
@@ -155,39 +144,32 @@ const Meeting: React.FC<IMeeting> = (props) => {
                 </div>
                 <div className={styles.MBottom}>
                   <div className={styles.status}>
-                    {globalState.onlineMemberIds.includes(m.user._id) ? (
+                    {m.isInMeeting ? (
                       <img src={callVoice} alt="callVoice" />
                     ) : (
-                      <img
-                        src={call_invite}
-                        alt="callInvite"
-                        onClick={createOrJoinRoom}
-                      />
+                      <img src={call_invite} alt="callInvite" />
                     )}
-                    {globalState.onlineMemberIds.includes(m.user._id) && (
-                      <>
-                        {globalState.muteMembersIds.includes(m.user._id) &&
-                        globalState.onlineMemberIds ? (
-                          <img src={mute} alt="callVoice" />
-                        ) : (
-                          <img src={unmute} alt="callVoice" />
-                        )}
-                      </>
+                    {m.isInMeeting && m.isMute && (
+                      <img src={mute} alt="callVoice" />
+                    )}
+                    {m.isInMeeting && !m.isMute && (
+                      <img src={unmute} alt="callVoice" />
                     )}
                   </div>
-                  <div
-                    className={styles.del}
-                    onClick={() => {
-                      delMemberUser(m.user._id);
-                    }}
-                  >
-                    {selfUser.role === 'admin' && <img src={tick} alt="tick" />}
+                  <div className={styles.del}>
+                    {m.isInMeeting && <img src={tick} alt="tick" />}
                   </div>
                 </div>
               </section>
             );
           })}
       </div>
+      {/*<div className={styles.meetingInfo}>*/}
+      {/*  <Button type={'primary'} style={{ width: '100%' }}>*/}
+      {/*    Leave*/}
+      {/*  </Button>*/}
+      {/*  <h5>Record 00:24:43</h5>*/}
+      {/*</div>*/}
     </div>
   );
 };

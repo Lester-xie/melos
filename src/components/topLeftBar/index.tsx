@@ -1,37 +1,195 @@
-import {Modal, Input,Tooltip} from 'antd';
+import {Modal, Input, Tooltip, message, Popconfirm} from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import DelIcon from '../../assets/chat/del.png'
+import EditIcon from '../../assets/chat/edit.png'
 import styles from "./index.less";
-import {useState} from "react";
+import {ChangeEvent, useState} from "react";
+import {createProject, getProjects, updateProjectNameAPI,delProject} from "@/services/api";
+import {useDispatch,useSelector} from 'umi'
+import  moment from 'moment'
 
-interface IProject {
-  id:string
-}
 const TopLeftBar = () => {
   const [newFlag,setNewFlag] = useState(false)
-  const [projects,setProjects] = useState<IProject[]>([
-    {id:"1"},
-    {id:"2"},
-  ])
-  const del = (id:string)=>{
-    setProjects([
-      {id:"1"}
-    ])
+  const [projectName,setProjectName] = useState('')
+  const [joinInputValue,setJoinInputValue] = useState('')
+  const [createInputValue,setCreateInputValue] = useState('')
+  const [updatingProject,setUpdatingProject] = useState<{name:string,id:string}>({name:'',id:''})
+  const [joinedProjects,setJoinedProjects] = useState<Array<API.ProjectType>>([])
+  const [createdProjects,setCreatedProjects] = useState<Array<API.ProjectType>>([])
+  const dispatch =  useDispatch()
+
+  // @ts-ignore
+  const currentProject: {name:string,id:string} = useSelector((state) => state.global.project);
+
+  const createNewProject = async ()=>{
+     if(!projectName){
+       message.warning('Please input Project name')
+       return
+     }
+     const res =  await createProject(projectName)
+     if(res.code===0){
+      const {name,_id} = res.data.result;
+      message.success('Create project success')
+       setProjectName('')
+       setNewFlag(false)
+       // dispatch({
+       //   type: 'global/save',
+       //   payload: {
+       //     project: {
+       //       name,
+       //       id:_id
+       //     },
+       //   },
+       // })
+     }
   }
-  const content = (
+
+  const confirmToDel = (id:string)=>{
+    delProject(id).then(res=>{
+      if(res.code ===0){
+        message.success('remove success').then()
+        pullListForOwn()
+      }
+    })
+  }
+
+  const updateProjectNameFun = async()=>{
+    if(!updatingProject.name){
+      message.warning('Please input Project name')
+      return
+    }
+    updateProjectNameAPI(updatingProject.id,updatingProject.name).then(res=>{
+      if(res.code===0){
+        if(currentProject.id===updatingProject.id){
+          dispatch({
+            type: 'global/save',
+            payload: {
+              project: {
+                name:updatingProject.name,
+                id:updatingProject.id
+              },
+            },
+          })
+        }
+
+          setUpdatingProject({name:'',id:''})
+      }
+    })
+  }
+
+  const onInputChange = (e:ChangeEvent<HTMLInputElement>)=>{
+   const value = e.target.value
+    setProjectName(value)
+  }
+
+  const updateProjectName = (e:ChangeEvent<HTMLInputElement>)=>{
+    const value = e.target.value
+    setUpdatingProject((project)=>{
+      return {...project,name:value}
+    })
+  }
+  const onJoinInputChange = (e:ChangeEvent<HTMLInputElement>)=>{
+    const value = e.target.value
+    setJoinInputValue(value)
+  }
+  const onOwnInputChange = (e:ChangeEvent<HTMLInputElement>)=>{
+    const value = e.target.value
+    setCreateInputValue(value)
+  }
+  const pullListForMember =()=>{
+    getProjects('member').then(res=>{
+      const data =  res.data.result;
+      setJoinedProjects(data)
+    })
+  }
+  const pullListForOwn =()=>{
+    getProjects('owner').then(res=>{
+      const data =  res.data.result;
+      setCreatedProjects(data)
+    })
+  }
+
+  const selectProject  = (id:string,name:string)=>{
+    dispatch({
+      type: 'global/save',
+      payload: {
+        project: {
+          name,
+          id
+        },
+      },
+    })
+  }
+  const JoinContent = (
     <div className={styles.project}>
-      <p className={styles.search}><Input placeholder="Search" prefix={<SearchOutlined />}/></p>
-      <div className={styles.projectItems}>
+      <p className={styles.search}>
+        <Input
+          placeholder="Search"
+          value={joinInputValue}
+          onChange={(e)=>onJoinInputChange(e)}
+          prefix={<SearchOutlined />}/>
+      </p>
+      <div className={[styles.projectItems,'customScroll'].join(' ')}>
         {
-          projects.map(p=>{
-            return  <section key={p.id}>
+          joinInputValue &&  joinedProjects.filter(p=>{
+            return !p.deleted && p.name.indexOf(joinInputValue)>-1
+          }).map(p=>{
+            return  <section key={p._id} onClick={(e)=>{
+              e.stopPropagation()
+              selectProject(p._id,p.name)
+            }}>
               <div className={styles.content}>
-                <div className={styles.projectName}>this is project name</div>
-                <div className={styles.members}>members: 5</div>
-                <div className={styles.time}>2022-04-15 12:43</div>
+                <div className={styles.projectName}>{p.name}</div>
+                <div className={styles.members}>members: </div>
+                <div className={styles.time}>{moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}</div>
               </div>
-              <div className={styles.options} onClick={()=>{del(p.id)}}>
-                <img src={DelIcon} alt={'del'}/>
+              <div className={styles.options}>
+                <img src={EditIcon} alt={'edit'} onClick={()=>{setUpdatingProject({name:p.name,id:p._id})}}/>
+              </div>
+            </section>
+          })
+        }
+      </div>
+    </div>
+  );
+
+  const ownContent = (
+    <div className={styles.project}>
+      <p className={styles.search}>
+        <Input
+          placeholder="Search"
+          value={createInputValue}
+          onChange={(e)=>onOwnInputChange(e)}
+          prefix={<SearchOutlined />}/>
+      </p>
+      <div className={[styles.projectItems,'customScroll'].join(' ')}>
+        {
+          createInputValue &&  createdProjects.filter(p=>{
+            return !p.deleted && p.name.indexOf(createInputValue)>-1
+          }).map(p=>{
+            return  <section key={p._id} onClick={()=>{selectProject(p._id,p.name)}}>
+              <div className={styles.content}>
+                <div className={styles.projectName}>{p.name}</div>
+                <div className={styles.members}>members: </div>
+                <div className={styles.time}>{moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}</div>
+              </div>
+              <div className={styles.options}>
+                <img src={EditIcon} alt={'edit'} onClick={(e)=>{
+                  e.stopPropagation()
+                  setUpdatingProject({name:p.name,id:p._id})
+                }}/>
+                {
+                  p._id !== currentProject.id &&<span onClick={e=>e.stopPropagation()}>
+                  <Popconfirm
+                    title="Are you sure to delete this project?"
+                    onConfirm={()=>confirmToDel(p._id)}
+                    okText="Yes"
+                    cancelText="No"
+                  ><img src={DelIcon} alt={'del'}/>
+                  </Popconfirm>
+                  </span>
+                }
+
               </div>
             </section>
           })
@@ -41,10 +199,9 @@ const TopLeftBar = () => {
   );
   return <div className={styles.menu}>
     <ul>
-      <li>My Band</li>
       <li>
         <Tooltip
-          overlay={content}
+          overlay={ownContent}
           placement="bottomLeft"
           trigger="click"
           color={'#000000'}
@@ -57,7 +214,25 @@ const TopLeftBar = () => {
             padding:0
           }}
         >
-        <span style={{display:'inline-block',width:'100%',height:'47px'}}>Band‘s Music</span>
+          <span style={{display:'inline-block',width:'100%',height:'47px'}} onClick={pullListForOwn}>My Band</span>
+        </Tooltip>
+      </li>
+      <li>
+        <Tooltip
+          overlay={JoinContent}
+          placement="bottomLeft"
+          trigger="click"
+          color={'#000000'}
+          overlayStyle={{
+            width:'320px',
+            maxWidth:'320px',
+            left:'16px'
+          }}
+          overlayInnerStyle={{
+            padding:0
+          }}
+        >
+        <span style={{display:'inline-block',width:'100%',height:'47px'}} onClick={pullListForMember}>Band‘s Music</span>
       </Tooltip></li>
       <li onClick={()=>setNewFlag(true)}>New</li>
     </ul>
@@ -79,17 +254,53 @@ const TopLeftBar = () => {
       <header className={styles.header}>Create new project</header>
       <div className={styles.body}>
         <div style={{textAlign: 'center'}}><Input
+          value={projectName}
           style={{
             width: '400px',
             background: '#323436',
             borderColor: 'transparent',
             color:'rgba(255, 255, 255, 0.3)'
           }}
+          onChange={(e)=>onInputChange(e)}
           placeholder='Project Name'
         /></div>
         <div className={styles.footer}>
           <a className={styles.cancel} onClick={()=>setNewFlag(false)}>Cancel</a>
-          <a className={styles.create}>Create</a>
+          <a className={styles.create} onClick={createNewProject}>Create</a>
+        </div>
+      </div>
+    </Modal>
+    <Modal
+      style={{
+        top:'30%'
+      }}
+      width={496}
+      title=""
+      visible={!!updatingProject.id}
+      closable={false}
+      bodyStyle={{
+        background: '#1B1C1D',
+        color: 'white',
+        padding: 0
+      }}
+      footer={null}
+    >
+      <header className={styles.header}>Update project's name</header>
+      <div className={styles.body}>
+        <div style={{textAlign: 'center'}}><Input
+          value={updatingProject.name}
+          style={{
+            width: '400px',
+            background: '#323436',
+            borderColor: 'transparent',
+            color:'rgba(255, 255, 255, 0.3)'
+          }}
+          onChange={(e)=>updateProjectName(e)}
+          placeholder='Project Name'
+        /></div>
+        <div className={styles.footer}>
+          <a className={styles.cancel} onClick={()=>setUpdatingProject({name:'',id:''})}>Cancel</a>
+          <a className={styles.create} onClick={updateProjectNameFun}>update</a>
         </div>
       </div>
     </Modal>

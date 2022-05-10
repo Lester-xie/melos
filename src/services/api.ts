@@ -39,11 +39,17 @@ export async function uploadAudio(uploadLink: string, data: any) {
   return fetch(uploadLink, requestOptions);
 }
 
-export async function createAsset(token: string) {
+export async function createAsset(
+  token: string,
+  projectId: string,
+  name: string,
+) {
   return request(`asset/create`, {
     method: 'POST',
     data: {
       token,
+      project: projectId,
+      name,
     },
   });
 }
@@ -78,11 +84,11 @@ export async function getUserList(keyword: string) {
   });
 }
 
-function pushAction(type: string, data: any) {
+function pushAction(projectId: string, type: string, data: any) {
   return request(`project/action/create`, {
     method: 'POST',
     data: {
-      project: '62787b49a94c9a84356d293c',
+      project: projectId,
       event: 'action',
       extraBody: {
         token: window.localStorage.getItem('token'),
@@ -102,6 +108,74 @@ export async function inviteProjectUser(userId: string, projectId: string) {
     data: {
       user: userId,
       project: projectId,
+    },
+  });
+}
+
+// 创建项目
+export async function createProject(name: string) {
+  return request(`project/create`, {
+    method: 'POST',
+    data: {
+      name,
+    },
+  });
+}
+
+// 获取我参与或者我创建的项目
+export async function getProjects(mode: 'owner' | 'member') {
+  return request(`project/search`, {
+    method: 'POST',
+    data: {
+      conds: {
+        mode,
+      },
+      page: 1,
+      limit: 100,
+    },
+  });
+}
+
+// 修改项目名称
+export async function updateProjectNameAPI(_id: string, name: string) {
+  return request(`project/update`, {
+    method: 'POST',
+    data: {
+      _id,
+      name,
+    },
+  });
+}
+
+// 删除项目
+export async function delProject(_id: string) {
+  return request(`project/remove`, {
+    method: 'POST',
+    data: {
+      _id,
+    },
+  });
+}
+
+// 刪除項目成員
+export async function delProjectMemberAPI(memberId: string, id: string) {
+  return request(`project/member/remove`, {
+    method: 'POST',
+    data: {
+      memberId,
+      _id: id,
+    },
+  });
+}
+
+// 获取项目已上传资源
+export async function fetchUploadList(projectId: string) {
+  return request(`asset/search`, {
+    method: 'POST',
+    data: {
+      conds: {
+        project: projectId,
+      },
     },
   });
 }
