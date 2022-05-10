@@ -2,7 +2,7 @@ import styles from './index.less';
 import TopLeftBar from '@/components/topLeftBar';
 import Chat from '@/components/chat';
 import Workspace from '@/components/workspace';
-import { FC, useState } from 'react';
+import { FC, useEffect, useRef, useState } from 'react';
 import { Login, updateProjectNameAPI } from '@/services/api';
 import { GlobalModelState, ConnectProps, Loading, connect } from 'umi';
 import { Input, message, Popover } from 'antd';
@@ -17,6 +17,7 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
   const [projectNameFlag, setProjectNameFlag] = useState(false);
   const { project: currentProject } = global;
   const [token, setToken] = useState(window.localStorage.getItem('token'));
+  const [downloadStatus, setDownloadStatus] = useState(false);
   const onBtnClicked = (name: string) => {
     setActiveUser(name);
     Login(name).then((res: any) => {
@@ -59,6 +60,10 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
     });
   };
 
+  const onDownload = () => {
+    setDownloadStatus(true);
+  };
+
   return (
     <div className={styles.container}>
       <header>
@@ -84,7 +89,12 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
               David
             </button>
           </div>
-          <button className={styles.mint}>Mint NFT</button>
+          <button
+            className={styles.mint}
+            onClick={() => setDownloadStatus(true)}
+          >
+            Mint NFT
+          </button>
         </div>
       </header>
       {/*<div className={styles.projectName}>{currentProject.name||'Please create new project'}</div>*/}
@@ -111,7 +121,11 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
       </div>
       <main>
         <Chat />
-        <Workspace token={token} />
+        <Workspace
+          token={token}
+          downloadStatus={downloadStatus}
+          onDownload={() => setDownloadStatus(false)}
+        />
       </main>
     </div>
   );

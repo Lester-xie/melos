@@ -10,22 +10,25 @@ import styles from './index.less';
 
 interface Props {
   token: string | null;
+  downloadStatus: boolean;
+  onDownload: () => void;
 }
 
-import {
-  DownloadOutlined,
-  SwapOutlined,
-  UndoOutlined,
-} from '@ant-design/icons';
+import { SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
 import { debouncePushAction } from '@/services/api';
 import { useSelector } from 'umi';
+import { GlobalModelState } from '@/models/global';
 
 type State = 'cursor' | 'select';
 
-export default function Workspace({ token }: Props) {
+export default function Workspace({
+  token,
+  downloadStatus,
+  onDownload,
+}: Props) {
   const [ee] = useState(new EventEmitter());
   const [toneCtx, setToneCtx] = useState<any>(null);
   const setUpChain = useRef();
@@ -41,6 +44,28 @@ export default function Workspace({ token }: Props) {
   const currentProject: { name: string; id: string } = useSelector(
     (state) => state.global.project,
   );
+
+  const globalState: GlobalModelState = useSelector(
+    (state: any) => state.global,
+  );
+  const [selfUser, setSelfUser] = useState<any>({
+    user: {
+      name: '',
+      avatar: { url: '' },
+    },
+    isMute: true,
+    role: '',
+  });
+
+  useEffect(() => {
+    const self = JSON.parse(localStorage.getItem('user') || '{}');
+    if (globalState.memberList.length > 0) {
+      const me = globalState.memberList.find((m) => m.user._id === self.id);
+      if (me) {
+        setSelfUser(me);
+      }
+    }
+  }, [globalState.memberList]);
 
   const onFileSelect = (file: any, type: 'cloud' | 'local') => {
     setIsNoneState(false);
@@ -146,6 +171,13 @@ export default function Workspace({ token }: Props) {
       ee.emit('startaudiorendering', 'wav');
     }
   };
+
+  useEffect(() => {
+    if (downloadStatus) {
+      onDownloadBtnClicked();
+      onDownload();
+    }
+  }, [downloadStatus]);
 
   const onAddBtnClicked = () => {
     setShowResource(true);
@@ -272,15 +304,13 @@ export default function Workspace({ token }: Props) {
             <button>
               <UndoOutlined />
             </button>
-            <button onClick={onDownloadBtnClicked}>
-              <DownloadOutlined />
-            </button>
           </div>
         </div>
         <div className={styles.trackWrap}>
           {!isNoneState && <div ref={container} className={styles.trackList} />}
         </div>
       </div>
+      {selfUser.role === 'guest' && <div className={styles.mask} />}
     </div>
   );
 }
