@@ -13,7 +13,7 @@ import {
 import useAsync from '@/hooks/useAsync';
 import { cloneDeep } from 'lodash';
 import { Spin } from 'antd';
-import { useSelector } from 'umi';
+import { useDispatch, useSelector } from 'umi';
 import { UserInfo } from '@/models/global';
 
 type Tab = 'cloud' | 'local';
@@ -120,6 +120,8 @@ export default function Resource(props: Props) {
   const [searchResultList, setSearchResultList] = useState<any>([]);
   const [loading, setLoading] = useState(false);
   const [historyList, setHistoryList] = useState([]);
+
+  const dispatch = useDispatch();
 
   // @ts-ignore
   const userInfo: UserInfo = useSelector((state) => state.global.userInfo);

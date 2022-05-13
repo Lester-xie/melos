@@ -196,19 +196,20 @@ const Workspace = ({
   };
 
   useEffect(() => {
-    socket?.disconnect();
-    dispatch?.({
-      type: 'global/save',
-      payload: { socketConnectSuccess: false },
-    });
-    setSocket(io(`https://www.metaapp.fun?token=${token}`));
+    if (token) {
+      socket?.disconnect();
+      dispatch?.({
+        type: 'global/save',
+        payload: { socketConnectSuccess: false },
+      });
+      setSocket(io(`https://www.metaapp.fun?token=${token}`));
+    }
   }, [token]);
 
   useEffect(() => {
     if (socket && playContext) {
       socket.removeAllListeners();
       socket.on('action', (arg: any) => {
-        console.log(arg)
         const projectId = arg.project;
         if (projectId === currentProject.id) {
           const { type, token: actionToken, data } = arg.extraBody;
@@ -280,7 +281,6 @@ const Workspace = ({
       });
 
       socket.on('connect', () => {
-        socket.emit('action',{test:123})
         dispatch?.({
           type: 'global/save',
           payload: { socketConnectSuccess: true },
