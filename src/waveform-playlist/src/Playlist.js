@@ -509,6 +509,7 @@ export default class {
   }
 
   load(trackList) {
+    this.ee.emit('audiosourcesstartload', trackList);
     const loadPromises = trackList.map((trackInfo) => {
       const loader = LoaderFactory.createLoader(
         trackInfo.src,

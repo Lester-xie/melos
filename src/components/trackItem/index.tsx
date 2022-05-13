@@ -26,9 +26,8 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
   const [gain, setGain] = useState<number>(100);
   const [stereopan, setStereopan] = useState<number>(0);
 
-  // @ts-ignore
   const currentProject: { name: string; id: string } = useSelector(
-    (state) => state.global.project,
+    (state: any) => state.global.project,
   );
 
   const onMute = useCallback(() => {

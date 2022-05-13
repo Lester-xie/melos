@@ -59,6 +59,7 @@
         .content {
           flex: 1;
           color: white;
+          word-break: break-all;
           .name {
             margin-top: 4px;
           }
@@ -114,10 +115,22 @@
       display: flex;
       .left {
         width: 74px;
+        position: relative;
         img {
           width: 60px;
           height: 60px;
           border-radius: 16px;
+        }
+        .status{
+          position: absolute;
+          width: 16px;
+          height: 16px;
+          background: #d3cfcf;
+          border-radius: 16px;
+          right: 10px;
+        }
+        .online{
+          background: #3AEC56;
         }
       }
       .right {
@@ -171,10 +184,22 @@
           display: flex;
           .left {
             width: 48px;
+            position: relative;
             img {
               width: 40px;
               height: 40px;
               border-radius: 8px;
+            }
+            .status{
+              position: absolute;
+              width: 12px;
+              height: 12px;
+              background: #d3cfcf;
+              border-radius: 16px;
+              right: 5px;
+            }
+            .online{
+              background: #3AEC56;
             }
           }
           .right {
@@ -184,11 +209,20 @@
               line-height: 18px;
             }
             .tag {
-              span {
-                font-size: 10px;
-                padding: 2px 6px;
-                border-radius: 12px;
-                background: #00e0ff;
+              :global{
+                .ant-select-selector{
+                  background: #00E0FF;
+                  border: none;
+                  border-radius: 10px;
+                  width: 80px;
+                  line-height: 20px;
+                  height: 20px;
+                  color: white;
+                  margin-top: 3px;
+                  .ant-select-selection-item{
+                    line-height: 20px;
+                  }
+                }
               }
               span + span {
                 margin-left: 4px;

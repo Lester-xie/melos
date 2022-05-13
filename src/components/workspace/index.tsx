@@ -4,31 +4,39 @@ import EventEmitter from 'events';
 import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
-import { message } from 'antd';
+import { message, Spin } from 'antd';
 import { cloneDeep } from 'lodash';
 import styles from './index.less';
-
-interface Props {
-  token: string | null;
-  downloadStatus: boolean;
-  onDownload: () => void;
-}
-
-import { SwapOutlined, UndoOutlined } from '@ant-design/icons';
+import { PlusOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
 import { debouncePushAction } from '@/services/api';
-import { useSelector } from 'umi';
+import { connect } from 'umi';
 import { GlobalModelState } from '@/models/global';
+import { ConnectProps } from '@@/plugin-dva/connect';
+
+type Tab = 'M' | 'S' | 'R' | 'W' | 'A' | '';
+
+interface Props extends ConnectProps {
+  token: string | null;
+  downloadStatus: boolean;
+  onDownload: () => void;
+  global: GlobalModelState;
+  location: any;
+  history: any;
+  route: any;
+}
 
 type State = 'cursor' | 'select';
 
-export default function Workspace({
+const Workspace = ({
   token,
   downloadStatus,
   onDownload,
-}: Props) {
+  dispatch,
+  global,
+}: Props) => {
   const [ee] = useState(new EventEmitter());
   const [toneCtx, setToneCtx] = useState<any>(null);
   const setUpChain = useRef();
@@ -39,33 +47,9 @@ export default function Workspace({
   const [playContext, setPlayContext] = useState<any>(null);
   const [isNoneState, setIsNoneState] = useState(false);
   const [socket, setSocket] = useState<any>(null);
-
-  // @ts-ignore
-  const currentProject: { name: string; id: string } = useSelector(
-    (state) => state.global.project,
-  );
-
-  const globalState: GlobalModelState = useSelector(
-    (state: any) => state.global,
-  );
-  const [selfUser, setSelfUser] = useState<any>({
-    user: {
-      name: '',
-      avatar: { url: '' },
-    },
-    isMute: true,
-    role: '',
-  });
-
-  useEffect(() => {
-    const self = JSON.parse(localStorage.getItem('user') || '{}');
-    if (globalState.memberList.length > 0) {
-      const me = globalState.memberList.find((m) => m.user._id === self.id);
-      if (me) {
-        setSelfUser(me);
-      }
-    }
-  }, [globalState.memberList]);
+  const [tab, setTab] = useState<Tab>('');
+  const [showLoading, setShowLoading] = useState(false);
+  const { project: currentProject, userRoleInCurrentProject } = global;
 
   const onFileSelect = (file: any, type: 'cloud' | 'local') => {
     setIsNoneState(false);
@@ -119,6 +103,7 @@ export default function Workspace({
 
         ee.on('audiosourcesloaded', function () {
           setPlayContext(null);
+          setShowLoading(false);
         });
 
         ee.on('audiosourcesrendered', function () {
@@ -127,6 +112,12 @@ export default function Workspace({
 
         ee.on('select', function (start, end, track) {
           // console.log(start, end, track);
+        });
+
+        ee.on('audiosourcesstartload', (trackList) => {
+          if (trackList.length > 0) {
+            setShowLoading(true);
+          }
         });
 
         playlist.load(trackList).then(() => {
@@ -180,6 +171,10 @@ export default function Workspace({
   }, [downloadStatus]);
 
   const onAddBtnClicked = () => {
+    if (!currentProject?.id) {
+      message.warn('Please select one project first');
+      return;
+    }
     setShowResource(true);
   };
 
@@ -202,6 +197,10 @@ export default function Workspace({
 
   useEffect(() => {
     socket?.disconnect();
+    dispatch?.({
+      type: 'global/save',
+      payload: { socketConnectSuccess: false },
+    });
     setSocket(io(`https://www.metaapp.fun?token=${token}`));
   }, [token]);
 
@@ -209,73 +208,126 @@ export default function Workspace({
     if (socket && playContext) {
       socket.removeAllListeners();
       socket.on('action', (arg: any) => {
-        const { type, token: actionToken, data } = arg.extraBody;
-        const localStorageToken = window.localStorage.getItem('token');
-        if (actionToken !== localStorageToken) {
-          switch (type) {
-            case 'addTrack': {
-              playContext.load([data]).then(() => {
+        console.log(arg)
+        const projectId = arg.project;
+        if (projectId === currentProject.id) {
+          const { type, token: actionToken, data } = arg.extraBody;
+          const localStorageToken = window.localStorage.getItem('token');
+          if (actionToken && actionToken !== localStorageToken) {
+            switch (type) {
+              // 新增音频
+              case 'addTrack': {
+                playContext.load([data]).then(() => {
+                  setTrackList([...playContext.tracks]);
+                });
+                break;
+              }
+              // 移除音频
+              case 'removeTrack': {
+                ee.emit('removeTrack', playContext.tracks[data.index]);
                 setTrackList([...playContext.tracks]);
-              });
-              break;
+                setIsNoneState(playContext.tracks.length === 0);
+                break;
+              }
+              // 音量改变
+              case 'changeVolume': {
+                ee.emit('volumechange', data.value, trackList[data.index]);
+                const newTrackList = cloneDeep(trackList);
+                newTrackList[data.index].gain = data.value / 100;
+                setTrackList([...newTrackList]);
+                break;
+              }
+              // 左右声道改变
+              case 'changeStereopan': {
+                ee.emit('stereopan', data.value, trackList[data.index]);
+                const newTrackList = cloneDeep(trackList);
+                newTrackList[data.index].stereoPan = data.value / 100;
+                setTrackList([...newTrackList]);
+                break;
+              }
+              // 静音切换
+              case 'changeMute': {
+                ee.emit('mute', playContext.tracks[data.index]);
+                const newTrackList = cloneDeep(trackList);
+                newTrackList[data.index].mute = !newTrackList[data.index].mute;
+                setTrackList([...newTrackList]);
+                break;
+              }
+              // solo 切换
+              case 'changeSolo': {
+                ee.emit('solo', playContext.tracks[data.index]);
+                const newTrackList = cloneDeep(trackList);
+                newTrackList[data.index].solo = !newTrackList[data.index].solo;
+                setTrackList([...newTrackList]);
+                break;
+              }
+              // 更改项目名称
+              case 'changeProjectName': {
+                dispatch?.({
+                  type: 'global/save',
+                  payload: {
+                    project: {
+                      name: data.value,
+                      id: currentProject.id,
+                    },
+                  },
+                });
+              }
             }
-            case 'removeTrack': {
-              ee.emit('removeTrack', playContext.tracks[data.index]);
-              setTrackList([...playContext.tracks]);
-              setIsNoneState(playContext.tracks.length === 0);
-              break;
-            }
-            case 'changeVolume': {
-              ee.emit('volumechange', data.value, trackList[data.index]);
-              const newTrackList = cloneDeep(trackList);
-              newTrackList[data.index].gain = data.value / 100;
-              setTrackList([...newTrackList]);
-              break;
-            }
-            case 'changeStereopan': {
-              ee.emit('stereopan', data.value, trackList[data.index]);
-              const newTrackList = cloneDeep(trackList);
-              newTrackList[data.index].stereoPan = data.value / 100;
-              setTrackList([...newTrackList]);
-              break;
-            }
-            case 'changeMute': {
-              ee.emit('mute', playContext.tracks[data.index]);
-              const newTrackList = cloneDeep(trackList);
-              newTrackList[data.index].mute = !newTrackList[data.index].mute;
-              setTrackList([...newTrackList]);
-              break;
-            }
-            case 'changeSolo': {
-              ee.emit('solo', playContext.tracks[data.index]);
-              const newTrackList = cloneDeep(trackList);
-              newTrackList[data.index].solo = !newTrackList[data.index].solo;
-              setTrackList([...newTrackList]);
-              break;
-            }
+            message.success('Sync succeeded');
           }
-          message.success('Sync succeeded');
         }
       });
+
+      socket.on('connect', () => {
+        socket.emit('action',{test:123})
+        dispatch?.({
+          type: 'global/save',
+          payload: { socketConnectSuccess: true },
+        });
+      });
     }
-  }, [socket, playContext, trackList]);
+  }, [socket, playContext, trackList, currentProject]);
 
   return (
     <div className={styles.container}>
-      <div>
-        <Resource
-          show={showResource}
-          onClose={() => setShowResource(false)}
-          onSelect={onFileSelect}
-        />
-        <TrackList
-          tracks={trackList}
-          onAddBtnClicked={onAddBtnClicked}
-          onDeleteClicked={onDeleteClicked}
-        />
-      </div>
-      <div className={styles.trackContainer}>
-        <div className={styles.operation}>
+      <div className={styles.operationWrap}>
+        <div className={styles.left}>
+          <button
+            onClick={() => setTab('M')}
+            className={tab === 'M' ? styles.active : ''}
+          >
+            M
+          </button>
+          <button
+            onClick={() => setTab('S')}
+            className={tab === 'S' ? styles.active : ''}
+          >
+            S
+          </button>
+          <button
+            onClick={() => setTab('R')}
+            className={tab === 'R' ? styles.active : ''}
+          >
+            R
+          </button>
+          <button
+            onClick={() => setTab('W')}
+            className={tab === 'W' ? styles.active : ''}
+          >
+            W
+          </button>
+          <button
+            onClick={() => setTab('A')}
+            className={tab === 'A' ? styles.active : ''}
+          >
+            A
+          </button>
+          <button className={styles.btnAdd} onClick={onAddBtnClicked}>
+            <PlusOutlined />
+          </button>
+        </div>
+        <div className={styles.right}>
           <div className={styles.trackTransport}>
             <button onClick={onStopBtnClicked} className={styles.stopBtn} />
             <button onClick={onPlayBtnClicked} className={styles.playBtn} />
@@ -306,11 +358,38 @@ export default function Workspace({
             </button>
           </div>
         </div>
-        <div className={styles.trackWrap}>
-          {!isNoneState && <div ref={container} className={styles.trackList} />}
+      </div>
+      <div className={styles.resourceWrap}>
+        <div>
+          <Resource
+            show={showResource}
+            onClose={() => setShowResource(false)}
+            onSelect={onFileSelect}
+          />
+          <TrackList
+            tracks={trackList}
+            onAddBtnClicked={onAddBtnClicked}
+            onDeleteClicked={onDeleteClicked}
+          />
+        </div>
+        <div className={styles.trackContainer}>
+          <div className={styles.trackWrap}>
+            {!isNoneState && (
+              <div ref={container} className={styles.trackList} />
+            )}
+            {showLoading && (
+              <div className={styles.loadMask}>
+                <Spin size="large" tip="Loading" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      {selfUser.role === 'guest' && <div className={styles.mask} />}
+      {userRoleInCurrentProject === 'guest' && <div className={styles.mask} />}
     </div>
   );
-}
+};
+
+export default connect(({ global }: { global: GlobalModelState }) => ({
+  global,
+}))(Workspace);

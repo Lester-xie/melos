@@ -3,9 +3,14 @@ import TopLeftBar from '@/components/topLeftBar';
 import Chat from '@/components/chat';
 import Workspace from '@/components/workspace';
 import { FC, useEffect, useRef, useState } from 'react';
-import { Login, updateProjectNameAPI } from '@/services/api';
+import {
+  debouncePushAction,
+  Login,
+  updateProjectNameAPI,
+} from '@/services/api';
 import { GlobalModelState, ConnectProps, Loading, connect } from 'umi';
 import { Input, message, Popover } from 'antd';
+import { UserInfo } from '@/models/global';
 const { Search } = Input;
 interface IndexProps extends ConnectProps {
   global: GlobalModelState;
@@ -15,7 +20,11 @@ interface IndexProps extends ConnectProps {
 const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
   const [activeUser, setActiveUser] = useState('');
   const [projectNameFlag, setProjectNameFlag] = useState(false);
-  const { project: currentProject } = global;
+  const {
+    project: currentProject,
+    userRoleInCurrentProject,
+    socketConnectSuccess,
+  } = global;
   const [token, setToken] = useState(window.localStorage.getItem('token'));
   const [downloadStatus, setDownloadStatus] = useState(false);
   const onBtnClicked = (name: string) => {
@@ -24,15 +33,34 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
       if (res.code === 0) {
         setToken(res.data.token);
         window.localStorage.setItem('token', res.data.token);
-        const user = JSON.stringify({
+        const user = {
           name: res.data.name,
           id: res.data._id,
           avatar: res.data?.avatar?.url,
+        };
+        const stringifyUser = JSON.stringify(user);
+        window.localStorage.setItem('user', stringifyUser);
+        dispatch?.({
+          type: 'global/save',
+          payload: {
+            userInfo: user,
+          },
         });
-        window.localStorage.setItem('user', user);
       }
     });
   };
+
+  useEffect(() => {
+    const userInfoString = localStorage.getItem('user');
+    if (userInfoString) {
+      const userInfo: UserInfo = JSON.parse(userInfoString);
+      setActiveUser(userInfo.name);
+      dispatch?.({
+        type: 'global/save',
+        payload: { userInfo },
+      });
+    }
+  }, [dispatch]);
 
   const changeProjectNameFlagChange = (v: boolean) => {
     if (!currentProject.name) {
@@ -46,7 +74,8 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
     updateProjectNameAPI(currentProject.id, value).then((res) => {
       if (res.code === 0) {
         setProjectNameFlag(false);
-        message.success('Update success').then();
+        message.success('Update success');
+        debouncePushAction(currentProject.id, 'changeProjectName', { value });
         dispatch?.({
           type: 'global/save',
           payload: {
@@ -58,10 +87,6 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
         });
       }
     });
-  };
-
-  const onDownload = () => {
-    setDownloadStatus(true);
   };
 
   return (
@@ -88,6 +113,11 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
             >
               David
             </button>
+            {socketConnectSuccess ? (
+              <span className={styles.successful} />
+            ) : (
+              <span className={styles.failed} />
+            )}
           </div>
           <button
             className={styles.mint}
@@ -97,27 +127,30 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
           </button>
         </div>
       </header>
-      {/*<div className={styles.projectName}>{currentProject.name||'Please create new project'}</div>*/}
       <div className={styles.projectName}>
-        <Popover
-          content={
-            <Search
-              placeholder="project name"
-              style={{ width: 200 }}
-              defaultValue={currentProject.name}
-              onSearch={onProjectNameEdit}
-              enterButton={'Send'}
-            />
-          }
-          title="Change project Name"
-          trigger="click"
-          visible={projectNameFlag}
-          onVisibleChange={(v) => {
-            changeProjectNameFlagChange(v);
-          }}
-        >
-          {currentProject.name || 'Please select one project'}
-        </Popover>
+        {userRoleInCurrentProject === 'guest' ? (
+          <span className={styles.name}>{currentProject.name}</span>
+        ) : (
+          <Popover
+            content={
+              <Search
+                placeholder="project name"
+                style={{ width: 200 }}
+                defaultValue={currentProject.name}
+                onSearch={onProjectNameEdit}
+                enterButton={'Send'}
+              />
+            }
+            title="Change project Name"
+            trigger="click"
+            visible={projectNameFlag}
+            onVisibleChange={(v) => {
+              changeProjectNameFlagChange(v);
+            }}
+          >
+            {currentProject.name || 'Please select one project'}
+          </Popover>
+        )}
       </div>
       <main>
         <Chat />
@@ -125,6 +158,9 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
           token={token}
           downloadStatus={downloadStatus}
           onDownload={() => setDownloadStatus(false)}
+          location={null}
+          history={null}
+          route={null}
         />
       </main>
     </div>

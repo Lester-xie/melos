@@ -15,6 +15,7 @@ import {
   delProjectMemberAPI,
   getMemberList,
   inviteProjectUser,
+  updateMemberRole
 } from '@/services/api';
 const { TabPane } = Tabs;
 
@@ -25,7 +26,6 @@ const CustomTab = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [active, setActive] = useState('meeting');
   const [records, setRecords] = useState<API.messageRecord[]>([]);
-  const [localStreamId, setLocalStreamId] = useState('');
 
   const globalState: GlobalModelState = useSelector(
     (state: any) => state.global,
@@ -87,11 +87,18 @@ const CustomTab = () => {
     [memberRef],
   );
 
-  const toggleMute = (bol: boolean) => {
+  const toggleMute = (bol: boolean,userId:string='') => {
+    let id = userId
+    if(!userId){
+      id =  user.id
+    }
+    const map =  globalState.userIdMappingStreamId
+    const streamId = map[id]
+    if(!streamId){return}
     if (bol) {
-      RTCRef.current.streamEvents[localStreamId].stream.mute('audio');
+      RTCRef.current.streamEvents[streamId].stream.mute('audio');
     } else {
-      RTCRef.current.streamEvents[localStreamId].stream.unmute('audio');
+      RTCRef.current.streamEvents[streamId].stream.unmute('audio');
     }
   };
 
@@ -122,10 +129,32 @@ const CustomTab = () => {
   };
 
   // 刪除用戶
-  const delMember = (id: string) => {
-    delProjectMemberAPI(id, globalState.project.id)
+  const delMember = (id: string,userId:string) => {
+    delProjectMemberAPI(id)
       .then((res) => {
-        console.log(res);
+        // 删除项目成员成功
+        //  1.更新memberList 列表
+        if(res.code===0){
+          getMemberList(globalState.project.id).then(c=>{
+            if(c.code ===0){
+              dispatch({
+                type: 'global/save',
+                payload: {
+                  memberList: c.data.result,
+                },
+              });
+            }
+          })
+        }
+
+        // 2.把他T出会议室，如果他在线的话
+        const map = globalState.userIdMappingStreamId
+        // 找出对应的stream Id
+        const streamId =  map[userId]
+        if(!streamId){return}
+        // RTCRef.current.removeStream(streamId);
+        RTCRef.current.deletePeer(userId);
+
       })
       .catch((e) => {
         console.log(e);
@@ -152,19 +181,43 @@ const CustomTab = () => {
     RTCRef.current.extra = {
       userId: user.id,
     };
+    RTCRef.current.userid = user.id
+    RTCRef.current.iceServers = [{
+      'urls': 'stun:8.218.125.220:3478',
+    }];
+    RTCRef.current.iceServers.push({
+      urls: 'turn:8.218.125.220:3478',
+      credential: 'anxing123',
+      username: 'anxing'
+    })
     RTCRef.current.onopen = function () {
       // RTCRef.current.send('hello every one')
       console.log(11111, 'room open...');
+      // RTCRef.current.streamEvents[streamId].stream.mute('audio');
     };
     RTCRef.current.onmute = muteOrUnMuteCallback;
     RTCRef.current.onunmute = muteOrUnMuteCallback;
+    RTCRef.current.onPeerStateChanged  = (state:any)=>{
+      console.log(111111111111111111,state)
+      if (state.iceConnectionState.search(/closed|failed|disconnected/gi) !== -1) {
+         // @ts-ignore
+        message.error('You had been ticked from the project').then()
+        window.location.reload()
+      }
+    };
     RTCRef.current.onmessage = callback;
     RTCRef.current.onstream = function (event: any) {
-      const { type, extra, stream } = event;
-      if (type === 'local') {
-        setLocalStreamId(stream.streamid);
-      }
+      const { type,extra, stream } = event;
+
+      console.log(222,stream)
+      // if(type==='local'){
+      //   console.log(121212)
+      //   RTCRef.current.streamEvents[stream.streamId].stream.mute('audio');
+      // }
+
       const userId = extra.userId;
+
+
       const { isAudio } = stream;
       if (!isAudio) {
         //mute add
@@ -181,10 +234,15 @@ const CustomTab = () => {
       let onlineMemberIdsSet = new Set(globalState.onlineMemberIds);
       onlineMemberIdsSet.add(userId);
       const onlineMembers = Array.from(onlineMemberIdsSet);
+
+      // 生成userid 和 streamId的map关系
+       let map = globalState.userIdMappingStreamId
+       map[userId] =stream.streamid
       dispatch({
         type: 'global/save',
         payload: {
           onlineMemberIds: onlineMembers,
+          userIdMappingStreamId: map,
         },
       });
     };
@@ -199,6 +257,30 @@ const CustomTab = () => {
       },
     });
   };
+
+  const onRoleChange = (mId:string,e:string)=>{
+    updateMemberRole(mId,e).then(res=>{
+      if(res.code ===0){
+        message.success('Update role success').then()
+        getMemberList(globalState.project.id).then(c=>{
+          if(c.code ===0){
+            dispatch({
+              type: 'global/save',
+              payload: {
+                memberList: c.data.result,
+              },
+            });
+          }
+        })
+      }
+    })
+  }
+
+  useEffect(()=>{
+    if(globalState.project.id){
+      goCreateOrJoinRoom()
+    }
+  },[globalState.project])
   return (
     <Tabs
       activeKey={active}
@@ -242,6 +324,7 @@ const CustomTab = () => {
           toggleMute={toggleMute}
           delMember={delMember}
           goCreateOrJoinRoom={goCreateOrJoinRoom}
+          onRoleChange={onRoleChange}
         />
       </TabPane>
       <TabPane tab="discuss" key="discuss">

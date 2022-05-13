@@ -1,4 +1,4 @@
-import { Select, Button } from 'antd';
+import {Select, Button, Popconfirm, message } from 'antd';
 import { GlobalModelState, useSelector } from 'umi';
 import { PlusOutlined } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
@@ -14,18 +14,21 @@ import styles from './index.less';
 interface IMeeting {
   inviteUser: (id: string) => void;
   toggleMute: (flag: boolean) => void;
-  delMember: (id: string) => void;
+  delMember: (id: string,userId:string) => void;
   goCreateOrJoinRoom: () => void;
+  onRoleChange: (memberId:string,e:any) => void;
 }
 
 const { Option } = Select;
 const Meeting: React.FC<IMeeting> = (props) => {
-  const { toggleMute, delMember, goCreateOrJoinRoom } = props;
+  const { toggleMute, delMember, goCreateOrJoinRoom,onRoleChange } = props;
   const [userList, setUserList] = useState([]);
-  const [selectValue, setSelectValue] = useState('123');
+  const [selectValue, setSelectValue] = useState('');
   const globalState: GlobalModelState = useSelector(
     (state: any) => state.global,
   );
+
+  const { socketConnectSuccess } = globalState;
   const [selfUser, setSelfUser] = useState<any>({
     user: {
       name: '',
@@ -51,13 +54,14 @@ const Meeting: React.FC<IMeeting> = (props) => {
   };
 
   // 刪除項目成員
-  const delMemberUser = (id: string) => {
-    delMember(id);
+  const delMemberUser = (id: string,userId:string) => {
+    delMember(id,userId);
   };
 
   // 拉起一个房间
   const createOrJoinRoom = () => {
-    goCreateOrJoinRoom();
+    // goCreateOrJoinRoom();
+    message.success('Message had been send').then()
   };
 
   const unMuteMyself = () => {
@@ -84,19 +88,29 @@ const Meeting: React.FC<IMeeting> = (props) => {
   const inviteMember = () => {
     props.inviteUser(selectValue);
   };
+
+  const { muteMembersIds, memberList, onlineMemberIds } = globalState;
   return (
     <div className={styles.meeting}>
       <div className={styles.self}>
         <div className={styles.left}>
           <img src={selfUser.user?.avatar?.url || defaultImg} alt={'avatar'} />
+          <span
+            className={
+              socketConnectSuccess
+                ? [styles.status, styles.online].join(' ')
+                : styles.status
+            }
+          />
         </div>
         <div className={styles.right}>
           <div className={styles.name}>{selfUser.user.name}</div>
           <div className={styles.tag}>
-            {globalState.muteMembersIds.includes(selfUser.user._id) ? (
-              <img src={mute} alt="callVoice" onClick={unMuteMyself} />
-            ) : (
+            {onlineMemberIds.includes(selfUser.user._id) &&
+            !muteMembersIds.includes(selfUser.user._id) ? (
               <img src={unmute} alt="callInvite" onClick={muteMyself} />
+            ) : (
+              <img src={mute} alt="callVoice" onClick={unMuteMyself} />
             )}
             {/*<span>Drummer</span>*/}
 
@@ -133,7 +147,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
         </div>
       </div>
       <div className={[styles.members, 'customScroll'].join(' ')}>
-        {globalState.memberList
+        {memberList
           .filter((m) => m.user._id !== selfUser.user._id)
           .map((m) => {
             return (
@@ -144,12 +158,22 @@ const Meeting: React.FC<IMeeting> = (props) => {
                       src={m.user?.avatar?.url || defaultImg}
                       alt={'avatar'}
                     />
+                    <span className={styles.status} />
                   </div>
                   <div className={styles.right}>
                     <div className={styles.name}>{m.user?.name}</div>
                     <div className={styles.tag}>
                       {/*<span>Drummer</span>*/}
-                      <span className={styles.role}>{m.role}</span>
+                      <Select
+                        defaultValue={m.role}
+                        style={{ width: 120 }}
+                        size='small'
+                        onChange={(e:string)=>onRoleChange(m._id,e)}
+                      >
+                        <Option value="admin">admin</Option>
+                        <Option value="editor">editor</Option>
+                        <Option value="guest">guest</Option>
+                      </Select>
                     </div>
                   </div>
                 </div>
@@ -175,13 +199,20 @@ const Meeting: React.FC<IMeeting> = (props) => {
                       </>
                     )}
                   </div>
+
                   <div
                     className={styles.del}
-                    onClick={() => {
-                      delMemberUser(m.user._id);
-                    }}
                   >
-                    {selfUser.role === 'admin' && <img src={tick} alt="tick" />}
+                    {selfUser.role === 'admin' &&
+                      <Popconfirm
+                        title="Are you sure to delete this Member?"
+                        onConfirm={()=> delMemberUser(m._id,m.user._id)}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <img src={tick} alt="tick" />
+                      </Popconfirm>
+                    }
                   </div>
                 </div>
               </section>

@@ -14,6 +14,7 @@ import useAsync from '@/hooks/useAsync';
 import { cloneDeep } from 'lodash';
 import { Spin } from 'antd';
 import { useSelector } from 'umi';
+import { UserInfo } from '@/models/global';
 
 type Tab = 'cloud' | 'local';
 
@@ -45,7 +46,7 @@ function formatTime(time: string) {
   const date = new Date(time);
   return `${date.getFullYear()}-${addZero(date.getMonth() + 1)}-${addZero(
     date.getDate(),
-  )} ${date.getHours()}:${date.getMinutes()}`;
+  )} ${date.getHours()}:${addZero(date.getMinutes())}`;
 }
 
 function addZero(number: number) {
@@ -62,7 +63,7 @@ export default function Resource(props: Props) {
     {
       id: 0,
       text: 'Vocals',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/Vocals30.mp3',
+      src: 'https://mixmusic.oss-cn-hongkong.aliyuncs.com/mixmusic/55CD2D9B81E981D4F51890555491E28F.LZfA1bsAiArc.9315690.mpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tEGW864FBDZopbNZwMW%2F20220512%2Foss-cn-hongkong%2Fs3%2Faws4_request&X-Amz-Date=20220512T074921Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=7f198e1f4b2acea541bc1907f133243783a49054083e9091a3d953079ff9b61a',
       name: 'Vocals30.mp3',
       time: '2022-05-05 12:43',
       active: false,
@@ -70,7 +71,7 @@ export default function Resource(props: Props) {
     {
       id: 1,
       text: 'Piano',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/PianoSynth30.mp3',
+      src: 'https://mixmusic.oss-cn-hongkong.aliyuncs.com/mixmusic/3805811796D6907D8E1CFBE0468E4341.wtrX72MBh0f7.9716957.mpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tEGW864FBDZopbNZwMW%2F20220512%2Foss-cn-hongkong%2Fs3%2Faws4_request&X-Amz-Date=20220512T074921Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=0b1ecc8aa6c730310a0b2a66f72d8f77f2c86be4c34679eb68ab00d89dcea107',
       name: 'PianoSynth30.mp3',
       time: '2022-05-06 17:10',
       active: false,
@@ -78,7 +79,7 @@ export default function Resource(props: Props) {
     {
       id: 2,
       text: 'Bass',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/BassDrums30.mp3',
+      src: 'https://mixmusic.oss-cn-hongkong.aliyuncs.com/mixmusic/9C9C80F6BA029C187AECDAA1DA6FADDF.TZKU50bjIpik.9560295.mpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tEGW864FBDZopbNZwMW%2F20220512%2Foss-cn-hongkong%2Fs3%2Faws4_request&X-Amz-Date=20220512T074921Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=2a56413d6b00802f7151de8651fe7f78e4b5c31990fc0cf05f8ede5b0bce5478',
       name: 'BassDrums30.mp3',
       time: '2022-05-07 12:13',
       active: false,
@@ -86,7 +87,7 @@ export default function Resource(props: Props) {
     {
       id: 3,
       text: 'Hop',
-      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/7.mp3',
+      src: 'https://mixmusic.oss-cn-hongkong.aliyuncs.com/mixmusic/2018DDA36DE2FB27830F353828B2C119.Zm73NpGLKH4l.10788996.mpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tEGW864FBDZopbNZwMW%2F20220512%2Foss-cn-hongkong%2Fs3%2Faws4_request&X-Amz-Date=20220512T074921Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=1ea4de96956757a036c0c1a157b56cedc221cfb63e5961e658846aaf404d85af',
       name: '329.mp3',
       time: '2022-05-05 14:31',
       active: false,
@@ -94,7 +95,7 @@ export default function Resource(props: Props) {
     {
       id: 4,
       text: 'Trip',
-      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/8.mp3',
+      src: 'https://mixmusic.oss-cn-hongkong.aliyuncs.com/mixmusic/D45C771F937C03F937FFA76DD0B6AECB.jQSeontkyQpB.10622959.mpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tEGW864FBDZopbNZwMW%2F20220512%2Foss-cn-hongkong%2Fs3%2Faws4_request&X-Amz-Date=20220512T074921Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=20e49ee7054a3b3f84949af89aa0e2607589dfc51c72ff06059a65b04a511ac4',
       name: '305.mp3',
       time: '2022-05-06 17:18',
       active: false,
@@ -102,7 +103,7 @@ export default function Resource(props: Props) {
     {
       id: 5,
       text: 'Pop',
-      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/9.mp3',
+      src: 'https://mixmusic.oss-cn-hongkong.aliyuncs.com/mixmusic/BB9AEFD85052FFF48A7C9570BA41EBF0.TmcqbJ6uACxT.10457856.mpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tEGW864FBDZopbNZwMW%2F20220512%2Foss-cn-hongkong%2Fs3%2Faws4_request&X-Amz-Date=20220512T074921Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=f59189efe304455e403b8eb83bdd3a75318ff0139875ea623ac1f8e2e3150e80',
       name: '318.mp3',
       time: '2022-05-06 19:01',
       active: false,
@@ -110,7 +111,7 @@ export default function Resource(props: Props) {
     {
       id: 6,
       text: 'Grunge',
-      src: 'https://honey-war-1252873427.cos.ap-shanghai.myqcloud.com/9.mp3',
+      src: 'https://mixmusic.oss-cn-hongkong.aliyuncs.com/mixmusic/BB9AEFD85052FFF48A7C9570BA41EBF0.TmcqbJ6uACxT.10457856.mpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=LTAI5tEGW864FBDZopbNZwMW%2F20220512%2Foss-cn-hongkong%2Fs3%2Faws4_request&X-Amz-Date=20220512T074921Z&X-Amz-Expires=43200&X-Amz-SignedHeaders=host&X-Amz-Signature=f59189efe304455e403b8eb83bdd3a75318ff0139875ea623ac1f8e2e3150e80',
       name: '054.mp3',
       time: '2022-05-06 12:10',
       active: false,
@@ -121,19 +122,17 @@ export default function Resource(props: Props) {
   const [historyList, setHistoryList] = useState([]);
 
   // @ts-ignore
-  const currentProject: { name: string; id: string } = useSelector(
-    (state) => state.global.project,
-  );
+  const userInfo: UserInfo = useSelector((state) => state.global.userInfo);
 
   useEffect(() => {
-    if (currentProject.id && tab === 'local') {
-      fetchUploadList(currentProject.id).then((res) => {
+    if (userInfo && tab === 'local') {
+      fetchUploadList(userInfo.id).then((res) => {
         if (res.code === 0) {
           setHistoryList(res.data.result);
         }
       });
     }
-  }, [tab, currentProject]);
+  }, [tab, userInfo]);
 
   // const { tagList } = useTags()
   const onCloseBtnClicked = useCallback(() => {
@@ -261,7 +260,7 @@ export default function Resource(props: Props) {
     const formdata = new FormData();
     formdata.append('', file, token);
     await uploadAudio(uploadLink, formdata);
-    const res = await createAsset(token, currentProject.id, fileName);
+    const res = await createAsset(token, userInfo.id, fileName);
     if (res.code === 0) {
       const data = res.data.result;
       props.onSelect(
@@ -273,7 +272,7 @@ export default function Resource(props: Props) {
       );
     }
     setLoading(false);
-    fetchUploadList(currentProject.id).then((res) => {
+    fetchUploadList(userInfo.id).then((res) => {
       if (res.code === 0) {
         setHistoryList(res.data.result);
       }

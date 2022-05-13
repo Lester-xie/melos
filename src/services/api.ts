@@ -39,16 +39,12 @@ export async function uploadAudio(uploadLink: string, data: any) {
   return fetch(uploadLink, requestOptions);
 }
 
-export async function createAsset(
-  token: string,
-  projectId: string,
-  name: string,
-) {
+export async function createAsset(token: string, userId: string, name: string) {
   return request(`asset/create`, {
     method: 'POST',
     data: {
       token,
-      project: projectId,
+      user: userId,
       name,
     },
   });
@@ -158,24 +154,34 @@ export async function delProject(_id: string) {
 }
 
 // 刪除項目成員
-export async function delProjectMemberAPI(memberId: string, id: string) {
+export async function delProjectMemberAPI(memberId: string) {
   return request(`project/member/remove`, {
     method: 'POST',
     data: {
       memberId,
-      _id: id,
     },
   });
 }
 
 // 获取项目已上传资源
-export async function fetchUploadList(projectId: string) {
+export async function fetchUploadList(userId: string) {
   return request(`asset/search`, {
     method: 'POST',
     data: {
       conds: {
-        project: projectId,
+        user: userId,
       },
     },
+  });
+}
+
+// 获取项目已上传资源
+export async function updateMemberRole(memberId: string,role:string) {
+  return request(`project/member/update`, {
+    method: 'POST',
+    data: {
+      memberId: memberId,
+      role
+    }
   });
 }

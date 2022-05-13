@@ -1,14 +1,25 @@
 import { Effect, Reducer, Subscription } from 'umi';
 
+export interface UserInfo {
+  id: string;
+  name: string;
+  avatar: string;
+}
+
 export interface GlobalModelState {
-  memberList: Array<API.MemberType>,
-  project:{
-    name:string,
-    id:string
-  },
-  roomId:string,
-  muteMembersIds:Array<string>,
-  onlineMemberIds:Array<string>,
+  memberList: Array<API.MemberType>;
+  project: {
+    name: string;
+    id: string;
+  };
+  roomId: string;
+  muteMembersIds: Array<string>;
+  onlineMemberIds: Array<string>;
+  userInfo: UserInfo | null;
+  userRoleInCurrentProject: string;
+  socketConnectSuccess: true | false;
+  socketOnlineUserIds: Array<string>;
+  userIdMappingStreamId: {[key:string]:string};
 }
 
 export interface GlobalModelType {
@@ -28,13 +39,18 @@ const GlobalModel: GlobalModelType = {
 
   state: {
     memberList: [],
-    project:{
-      name:'',
-      id:''
+    project: {
+      name: '',
+      id: '',
     },
-    roomId:'',
-    muteMembersIds:[],
-    onlineMemberIds:[]
+    roomId: '',
+    muteMembersIds: [],
+    onlineMemberIds: [],
+    userInfo: null,
+    userRoleInCurrentProject: '',
+    socketConnectSuccess: false,
+    socketOnlineUserIds: [],
+    userIdMappingStreamId:{}
   },
 
   effects: {

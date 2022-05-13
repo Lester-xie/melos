@@ -26,7 +26,7 @@ export const request: RequestConfig = {
       });
       if (status === 401 || status === 400) {
         setTimeout(() => {
-          window.location.href = '/user/login';
+          // window.location.href = '/user/login';
         }, 500);
       }
     }
