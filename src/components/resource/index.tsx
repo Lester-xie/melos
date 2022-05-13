@@ -121,8 +121,6 @@ export default function Resource(props: Props) {
   const [loading, setLoading] = useState(false);
   const [historyList, setHistoryList] = useState([]);
 
-  const dispatch = useDispatch();
-
   // @ts-ignore
   const userInfo: UserInfo = useSelector((state) => state.global.userInfo);
 

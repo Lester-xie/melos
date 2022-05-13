@@ -19,6 +19,7 @@ const MAX_CANVAS_WIDTH = 1000;
 
 export default class {
   constructor() {
+    this._id = '';
     this.name = 'Untitled';
     this.customClass = undefined;
     this.waveOutlineColor = undefined;
@@ -43,6 +44,10 @@ export default class {
 
   setName(name) {
     this.name = name;
+  }
+
+  setId(id) {
+    this._id = id;
   }
 
   setCustomClass(className) {

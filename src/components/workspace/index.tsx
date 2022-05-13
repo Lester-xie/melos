@@ -76,6 +76,7 @@ const Workspace = ({
             container: node,
             timescale: true,
             state: 'select',
+            exclSolo: true,
             colors: {
               waveOutlineColor: '#2f2f2f',
             },
@@ -249,17 +250,12 @@ const Workspace = ({
               // 静音切换
               case 'changeMute': {
                 ee.emit('mute', playContext.tracks[data.index]);
-                const newTrackList = cloneDeep(trackList);
-                newTrackList[data.index].mute = !newTrackList[data.index].mute;
-                setTrackList([...newTrackList]);
+                setTrackList([...cloneDeep(playContext.tracks)]);
                 break;
               }
               // solo 切换
               case 'changeSolo': {
                 ee.emit('solo', playContext.tracks[data.index]);
-                const newTrackList = cloneDeep(trackList);
-                newTrackList[data.index].solo = !newTrackList[data.index].solo;
-                setTrackList([...newTrackList]);
                 break;
               }
               // 更改项目名称

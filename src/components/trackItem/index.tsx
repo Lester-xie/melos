@@ -30,29 +30,51 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
     (state: any) => state.global.project,
   );
 
-  const onMute = useCallback(() => {
-    trackItem.ee.emit('mute', trackItem);
-    setMuted(!muted);
+  // 初始化 mute && solo 的状态
+  useEffect(() => {
+    trackItem.ee.emit(
+      'isInMutedTrack',
+      trackItem,
+      (isInMutedTrack: boolean) => {
+        setMuted(isInMutedTrack);
+      },
+    );
+    trackItem.ee.emit(
+      'isInSoloedTrack',
+      trackItem,
+      (isInSoloedTrack: boolean) => {
+        setSolo(isInSoloedTrack);
+      },
+    );
+
+    trackItem.ee.on('solochanged', () => {
+      trackItem.ee.emit(
+        'isInSoloedTrack',
+        trackItem,
+        (isInSoloedTrack: boolean) => {
+          setSolo(isInSoloedTrack);
+        },
+      );
+    });
+  }, [trackItem]);
+
+  const onMuteToggle = useCallback(() => {
+    trackItem.ee.emit('mute', trackItem, (isInMutedTrack: boolean) =>
+      setMuted(isInMutedTrack),
+    );
     debouncePushAction(currentProject.id, 'changeMute', { index });
   }, [trackItem, muted]);
 
   const onSoloToggle = useCallback(() => {
-    trackItem.ee.emit('solo', trackItem);
-    setSolo(!solo);
+    trackItem.ee.emit('solo', trackItem, (isInSoloedTrack: boolean) =>
+      setSolo(isInSoloedTrack),
+    );
     debouncePushAction(currentProject.id, 'changeSolo', { index });
   }, [trackItem, solo]);
 
   useEffect(() => {
     setGain(trackItem?.gain * 100);
   }, [trackItem?.gain]);
-
-  useEffect(() => {
-    setMuted(trackItem?.mute);
-  }, [trackItem?.mute]);
-
-  useEffect(() => {
-    setSolo(trackItem?.solo);
-  }, [trackItem?.solo]);
 
   useEffect(() => {
     setStereopan(trackItem?.stereoPan * 100);
@@ -100,7 +122,7 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
             <button
               type="button"
               className={muted ? styles.active : ''}
-              onClick={onMute}
+              onClick={onMuteToggle}
             >
               M
             </button>

@@ -267,16 +267,29 @@ export default class {
       });
     });
 
-    ee.on('solo', (track) => {
+    ee.on('solo', (track, callback) => {
       this.soloTrack(track);
       this.adjustTrackPlayout();
       this.drawRequest();
+      callback &&
+        callback(!!this.soloedTracks.find((item) => item._id === track._id));
+      this.ee.emit('solochanged', this.tracks);
     });
 
-    ee.on('mute', (track) => {
+    ee.on('isInSoloedTrack', (track, callback) => {
+      callback(!!this.soloedTracks.find((item) => item._id === track._id));
+    });
+
+    ee.on('mute', (track, callback) => {
       this.muteTrack(track);
       this.adjustTrackPlayout();
       this.drawRequest();
+      callback &&
+        callback(!!this.mutedTracks.find((item) => item._id === track._id));
+    });
+
+    ee.on('isInMutedTrack', (track, callback) => {
+      callback(!!this.mutedTracks.find((item) => item._id === track._id));
     });
 
     ee.on('removeTrack', (track) => {
@@ -558,6 +571,7 @@ export default class {
           const track = new Track();
           track.src = info.src;
           track.setBuffer(audioBuffer);
+          track.setId(new Date().getTime());
           track.setName(name);
           track.setEventEmitter(this.ee);
           track.setEnabledStates(states);
@@ -755,9 +769,9 @@ export default class {
   }
 
   muteTrack(track) {
-    const index = this.mutedTracks.indexOf(track);
+    const index = this.mutedTracks.find((item) => item._id === track._id);
 
-    if (index > -1) {
+    if (index) {
       this.mutedTracks.splice(index, 1);
     } else {
       this.mutedTracks.push(track);
@@ -765,9 +779,9 @@ export default class {
   }
 
   soloTrack(track) {
-    const index = this.soloedTracks.indexOf(track);
+    const index = this.soloedTracks.find((item) => item._id === track._id);
 
-    if (index > -1) {
+    if (index) {
       this.soloedTracks.splice(index, 1);
     } else if (this.exclSolo) {
       this.soloedTracks = [track];
