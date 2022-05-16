@@ -1,10 +1,6 @@
 import { request } from 'umi';
 import { debounce } from 'lodash';
-
-// function debounce(fn: any, timeout: number) {
-//   clearTimeout(fn.id);
-//   fn.id = setTimeout(fn, timeout);
-// }
+import { TrackInfo } from '@/models/global';
 
 /** login */
 export async function Login(name: string) {
@@ -132,14 +128,22 @@ export async function getProjects(mode: 'owner' | 'member') {
   });
 }
 
-// 修改项目名称
-export async function updateProjectNameAPI(_id: string, name: string) {
+// 修改项目
+export async function updateProject(
+  _id: string,
+  name: string,
+  tracks: Array<TrackInfo> | null = null,
+) {
+  const payload: any = {
+    _id,
+    name,
+  };
+  if (tracks) {
+    payload.tracks = tracks;
+  }
   return request(`project/update`, {
     method: 'POST',
-    data: {
-      _id,
-      name,
-    },
+    data: payload,
   });
 }
 
@@ -176,66 +180,80 @@ export async function fetchUploadList(userId: string) {
 }
 
 // 获取项目已上传资源
-export async function updateMemberRole(memberId: string,role:string) {
+export async function updateMemberRole(memberId: string, role: string) {
   return request(`project/member/update`, {
     method: 'POST',
     data: {
       memberId: memberId,
-      role
-    }
+      role,
+    },
   });
 }
 
 // 通知别人我已经上线socket
-export async function noticeOnline(useId:string){
-   return request('project/action/create',{
-     method: 'POST',
-     data: {
-       event: "online",
-       extraBody: {
-         userId: useId
-       }
-     }
-   })
+export async function noticeOnline(useId: string) {
+  return request('project/action/create', {
+    method: 'POST',
+    data: {
+      event: 'online',
+      extraBody: {
+        userId: useId,
+      },
+    },
+  });
 }
 
 // 通知别人我下线socket
-export async function noticeOffline(useId:string){
-  return request('project/action/create',{
+export async function noticeOffline(useId: string) {
+  return request('project/action/create', {
     method: 'POST',
     data: {
-      event: "offline",
+      event: 'offline',
       extraBody: {
-        userId: useId
-      }
-    }
-  })
+        userId: useId,
+      },
+    },
+  });
 }
 
 // 通知成员发生了变化
-export async function noticeMemberChanged(projectId:string){
-  return request('project/action/create',{
+export async function noticeMemberChanged(projectId: string) {
+  return request('project/action/create', {
     method: 'POST',
     data: {
-      event: "memberChanged",
+      event: 'memberChanged',
       extraBody: {
-        projectId
-      }
-    }
-  })
+        projectId,
+      },
+    },
+  });
 }
 
 // 邀请用户加入房间
-export async function inviteUserJoinRoom(userId:string,projectId:string,projectName:string){
-  return request('project/action/create',{
+export async function inviteUserJoinRoom(
+  userId: string,
+  projectId: string,
+  projectName: string,
+) {
+  return request('project/action/create', {
     method: 'POST',
     data: {
-      event: "inviteMemberJoinRoom",
+      event: 'inviteMemberJoinRoom',
       extraBody: {
         projectId,
         userId,
-        projectName
-      }
-    }
-  })
+        projectName,
+      },
+    },
+  });
+}
+
+// 获取所有在线用户
+export async function getAllOnlineUser() {
+  return request('project/action/create', {
+    method: 'POST',
+    data: {
+      event: 'inviteMemberJoinRoom',
+    },
+  });
 }

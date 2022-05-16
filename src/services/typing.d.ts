@@ -28,17 +28,18 @@ declare namespace API {
       };
     };
     role: 'admin' | 'guest' | 'editor';
-    isMute?:boolean,
-    isInMeeting?:boolean
+    isMute?: boolean;
+    isInMeeting?: boolean;
+    isOnline?: boolean;
     [key: string]: any;
   };
 
   type ProjectType = {
-    deleted: boolean
-    name: string
-    owner: {_id: string}
-    _id: string,
-    updatedAt: string,
-    [key:string]:any
-  }
+    deleted: boolean;
+    name: string;
+    owner: { _id: string };
+    _id: string;
+    updatedAt: string;
+    [key: string]: any;
+  };
 }

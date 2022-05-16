@@ -6,7 +6,9 @@ import styles from './index.less';
 import { ReactComponent as IconPlay } from '@/assets/icons/icon_play.svg';
 import { Popconfirm } from 'antd';
 import { debouncePushAction } from '@/services/api';
-import { useSelector } from 'umi';
+import { useSelector, useDispatch } from 'umi';
+import { cloneDeep } from 'lodash';
+import useDebounce from '@/hooks/useDebounce';
 
 interface Props {
   trackItem: any;
@@ -17,18 +19,52 @@ interface Props {
     status: string;
   };
   onDelete: () => void;
+  onShift: (value: number, index: number) => void;
+  onMute: (mute: boolean, index: number) => void;
+  onSolo: (solo: boolean, index: number) => void;
   index: number;
 }
 
-export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
+type ShiftType = 'mouse' | 'auto';
+
+export default function TrackItem({
+  trackItem,
+  item,
+  onDelete,
+  index,
+  onShift,
+  onMute,
+  onSolo,
+}: Props) {
   const [muted, setMuted] = useState<boolean>(false);
   const [solo, setSolo] = useState<boolean>(false);
   const [gain, setGain] = useState<number>(100);
   const [stereopan, setStereopan] = useState<number>(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [shiftType, setShiftType] = useState<ShiftType>('auto');
+
+  const debouncedStartTime = useDebounce(startTime, 500) as number;
+  const debouncedShiftType = useDebounce(shiftType, 500) as ShiftType;
 
   const currentProject: { name: string; id: string } = useSelector(
     (state: any) => state.global.project,
   );
+
+  const trackList = useSelector((state: any) => state.global.currentTracks);
+
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (debouncedStartTime !== null) {
+      if (debouncedShiftType === 'mouse') {
+        onShift(debouncedStartTime, index);
+        debouncePushAction(currentProject.id, 'changeShift', {
+          value: debouncedStartTime,
+          index,
+        });
+      }
+    }
+  }, [debouncedStartTime, debouncedShiftType]);
 
   // 初始化 mute && solo 的状态
   useEffect(() => {
@@ -56,21 +92,28 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
         },
       );
     });
+
+    trackItem.ee.on('shift', (deltaTime: any, track: any, type: ShiftType) => {
+      setShiftType(type);
+      setStartTime(trackItem.getStartTime());
+    });
   }, [trackItem]);
 
   const onMuteToggle = useCallback(() => {
-    trackItem.ee.emit('mute', trackItem, (isInMutedTrack: boolean) =>
-      setMuted(isInMutedTrack),
-    );
+    trackItem.ee.emit('mute', trackItem, (isInMutedTrack: boolean) => {
+      setMuted(isInMutedTrack);
+      onMute(isInMutedTrack, index);
+    });
     debouncePushAction(currentProject.id, 'changeMute', { index });
   }, [trackItem, muted]);
 
   const onSoloToggle = useCallback(() => {
-    trackItem.ee.emit('solo', trackItem, (isInSoloedTrack: boolean) =>
-      setSolo(isInSoloedTrack),
-    );
+    trackItem.ee.emit('solo', trackItem, (isInSoloedTrack: boolean) => {
+      setSolo(isInSoloedTrack);
+      onSolo(isInSoloedTrack, index);
+    });
     debouncePushAction(currentProject.id, 'changeSolo', { index });
-  }, [trackItem, solo]);
+  }, [trackItem, solo, trackList]);
 
   useEffect(() => {
     setGain(trackItem?.gain * 100);
@@ -84,21 +127,37 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
     (value: number) => {
       setGain(value);
       trackItem.ee.emit('volumechange', value, trackItem);
+      const cloneTrackList = cloneDeep(trackList);
+      cloneTrackList[index].gain = value / 100;
+      dispatch({
+        type: 'global/update',
+        payload: {
+          currentTracks: [...cloneTrackList],
+        },
+      });
       debouncePushAction(currentProject.id, 'changeVolume', { value, index });
     },
-    [trackItem],
+    [trackItem, trackList],
   );
 
   const onStereoChange = useCallback(
     (value: number) => {
       setStereopan(value);
       trackItem.ee.emit('stereopan', value / 100, trackItem);
+      const cloneTrackList = cloneDeep(trackList);
+      cloneTrackList[index].stereoPan = value / 100;
+      dispatch({
+        type: 'global/update',
+        payload: {
+          currentTracks: [...cloneTrackList],
+        },
+      });
       debouncePushAction(currentProject.id, 'changeStereopan', {
         value,
         index,
       });
     },
-    [trackItem],
+    [trackItem, trackList],
   );
 
   const onPlay = useCallback(() => {

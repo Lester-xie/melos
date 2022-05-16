@@ -19,7 +19,7 @@ export default class {
       this.sampleRate,
     );
     this.prevX = x;
-    this.track.ee.emit('shift', deltaTime, this.track);
+    this.track.ee.emit('shift', deltaTime, this.track, 'mouse');
   }
 
   complete(x) {

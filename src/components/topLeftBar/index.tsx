@@ -7,11 +7,12 @@ import { ChangeEvent, useState } from 'react';
 import {
   createProject,
   getProjects,
-  updateProjectNameAPI,
+  updateProject,
   delProject,
 } from '@/services/api';
 import { useDispatch, useSelector } from 'umi';
 import moment from 'moment';
+import { TrackInfo } from '@/models/global';
 
 const TopLeftBar = () => {
   const [newFlag, setNewFlag] = useState(false);
@@ -71,25 +72,23 @@ const TopLeftBar = () => {
       message.warning('Please input Project name');
       return;
     }
-    updateProjectNameAPI(updatingProject.id, updatingProject.name).then(
-      (res) => {
-        if (res.code === 0) {
-          if (currentProject.id === updatingProject.id) {
-            dispatch({
-              type: 'global/save',
-              payload: {
-                project: {
-                  name: updatingProject.name,
-                  id: updatingProject.id,
-                },
+    updateProject(updatingProject.id, updatingProject.name).then((res) => {
+      if (res.code === 0) {
+        if (currentProject.id === updatingProject.id) {
+          dispatch({
+            type: 'global/save',
+            payload: {
+              project: {
+                name: updatingProject.name,
+                id: updatingProject.id,
               },
-            });
-          }
-
-          setUpdatingProject({ name: '', id: '' });
+            },
+          });
         }
-      },
-    );
+
+        setUpdatingProject({ name: '', id: '' });
+      }
+    });
   };
 
   const onInputChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +123,11 @@ const TopLeftBar = () => {
     });
   };
 
-  const selectProject = (id: string, name: string) => {
+  const selectProject = (
+    id: string,
+    name: string,
+    tracks: Array<TrackInfo>,
+  ) => {
     dispatch({
       type: 'global/save',
       payload: {
@@ -132,6 +135,7 @@ const TopLeftBar = () => {
           name,
           id,
         },
+        currentTracks: tracks || null,
       },
     });
   };
@@ -145,27 +149,40 @@ const TopLeftBar = () => {
           prefix={<SearchOutlined />}
         />
       </p>
-      <div className={[styles.projectItems,'customScroll'].join(' ')}>
-        {
-         joinedProjects.filter(p=>{
-            return !p.deleted && p.name.indexOf(joinInputValue)>-1
-          }).map(p=>{
-            return  <section key={p._id} onClick={(e)=>{
-              e.stopPropagation()
-              selectProject(p._id,p.name)
-            }}>
-              <div className={styles.content}>
-                <div className={styles.projectName}>{p.name}</div>
-                <div className={styles.members}>members: </div>
-                <div className={styles.time}>{moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}</div>
-              </div>
-              <div className={styles.options}>
-                <img src={EditIcon} alt={'edit'} onClick={()=>{setUpdatingProject({name:p.name,id:p._id})}}/>
-              </div>
-            </section>
+      <div className={[styles.projectItems, 'customScroll'].join(' ')}>
+        {joinedProjects
+          .filter((p) => {
+            return !p.deleted && p.name.indexOf(joinInputValue) > -1;
           })
-        }
-    </div>
+          .map((p) => {
+            return (
+              <section
+                key={p._id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectProject(p._id, p.name, p.tracks);
+                }}
+              >
+                <div className={styles.content}>
+                  <div className={styles.projectName}>{p.name}</div>
+                  <div className={styles.members}>members:</div>
+                  <div className={styles.time}>
+                    {moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}
+                  </div>
+                </div>
+                <div className={styles.options}>
+                  <img
+                    src={EditIcon}
+                    alt={'edit'}
+                    onClick={() => {
+                      setUpdatingProject({ name: p.name, id: p._id });
+                    }}
+                  />
+                </div>
+              </section>
+            );
+          })}
+      </div>
     </div>
   );
 
@@ -179,39 +196,52 @@ const TopLeftBar = () => {
           prefix={<SearchOutlined />}
         />
       </p>
-      <div className={[styles.projectItems,'customScroll'].join(' ')}>
-        {
-           createdProjects.filter(p=>{
-            return !p.deleted && p.name.indexOf(createInputValue)>-1
-          }).map(p=>{
-            return  <section key={p._id} onClick={()=>{selectProject(p._id,p.name)}}>
-              <div className={styles.content}>
-                <div className={styles.projectName}>{p.name}</div>
-                <div className={styles.members}>members: </div>
-                <div className={styles.time}>{moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}</div>
-              </div>
-              <div className={styles.options}>
-                <img src={EditIcon} alt={'edit'} onClick={(e)=>{
-                  e.stopPropagation()
-                  setUpdatingProject({name:p.name,id:p._id})
-                }}/>
-                {
-                  p._id !== currentProject.id &&<span onClick={e=>e.stopPropagation()}>
-                  <Popconfirm
-                    title="Are you sure to delete this project?"
-                    onConfirm={()=>confirmToDel(p._id)}
-                    okText="Yes"
-                    cancelText="No"
-                  ><img src={DelIcon} alt={'del'}/>
-                  </Popconfirm>
-                  </span>
-                }
-
-              </div>
-            </section>
+      <div className={[styles.projectItems, 'customScroll'].join(' ')}>
+        {createdProjects
+          .filter((p) => {
+            return !p.deleted && p.name.indexOf(createInputValue) > -1;
           })
-        }
-    </div>
+          .map((p) => {
+            return (
+              <section
+                key={p._id}
+                onClick={() => {
+                  selectProject(p._id, p.name, p.tracks);
+                }}
+              >
+                <div className={styles.content}>
+                  <div className={styles.projectName}>{p.name}</div>
+                  <div className={styles.members}>members:</div>
+                  <div className={styles.time}>
+                    {moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}
+                  </div>
+                </div>
+                <div className={styles.options}>
+                  <img
+                    src={EditIcon}
+                    alt={'edit'}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUpdatingProject({ name: p.name, id: p._id });
+                    }}
+                  />
+                  {p._id !== currentProject.id && (
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <Popconfirm
+                        title="Are you sure to delete this project?"
+                        onConfirm={() => confirmToDel(p._id)}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <img src={DelIcon} alt={'del'} />
+                      </Popconfirm>
+                    </span>
+                  )}
+                </div>
+              </section>
+            );
+          })}
+      </div>
     </div>
   );
   return (

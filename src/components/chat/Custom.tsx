@@ -14,8 +14,9 @@ import { socketPrefix } from '@/config';
 import {
   delProjectMemberAPI,
   getMemberList,
-  inviteProjectUser, noticeMemberChanged,
-  updateMemberRole
+  inviteProjectUser,
+  noticeMemberChanged,
+  updateMemberRole,
 } from '@/services/api';
 const { TabPane } = Tabs;
 
@@ -39,6 +40,24 @@ const CustomTab = () => {
 
   const callback = useCallback(
     (event: any) => {
+      const str = event.data;
+      if (str.substring(0, 9) === 'tickTick#') {
+        const uid = str.substring(9);
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (uid === user.id) {
+          RTCRef.current.closeSocket();
+          RTCRef.current = null;
+          dispatch({
+            type: 'global/save',
+            payload: {
+              muteMembersIds: [],
+              onlineMemberIds: [],
+              roomId: '',
+            },
+          });
+          return;
+        }
+      }
       // 通过ref动态引用获取到paused的当前状态
       const user = memberRef.current?.find(
         (m) => m.user._id === event.extra.userId,
@@ -74,7 +93,7 @@ const CustomTab = () => {
 
   const muteOrUnMuteCallback = useCallback(
     (event: any) => {
-      const {extra, isAudioMuted } = event;
+      const { extra, isAudioMuted } = event;
       const userId = extra.userId;
 
       const muteIds = [...onMuteIdsRef.current];
@@ -97,14 +116,14 @@ const CustomTab = () => {
     [onMuteIdsRef],
   );
 
-  const muteOrUnMuteSomeBodyCallback = ()=>{
-    console.log(123)
-  }
+  const muteOrUnMuteSomeBodyCallback = () => {
+    console.log(123);
+  };
 
   const onStreamCallback = useCallback(
     (event: any) => {
-      console.log('on stream...')
-      const {extra, stream } = event;
+      console.log('on stream...');
+      const { extra, stream } = event;
       const userId = extra.userId;
       const { isAudio } = stream;
       if (!isAudio) {
@@ -120,12 +139,11 @@ const CustomTab = () => {
         });
       }
       let onlineMemberIdsSet = new Set(onMeetingUserRef.current);
-      console.log(onlineMemberIdsSet)
       onlineMemberIdsSet.add(userId);
       const onlineMembers = Array.from(onlineMemberIdsSet);
       // 生成userid 和 streamId的map关系
-      let map = globalState.userIdMappingStreamId
-      map[userId] =stream.streamid
+      let map = globalState.userIdMappingStreamId;
+      map[userId] = stream.streamid;
       dispatch({
         type: 'global/save',
         payload: {
@@ -140,35 +158,40 @@ const CustomTab = () => {
   // 媒体流结束 onstreamended
   const onstreamendedCallback = useCallback(
     (event: any) => {
-      console.log('on stream end...',event)
-      const {extra } = event;
+      console.log('on stream end...', event);
+      const { extra } = event;
       const userId = extra.userId;
-      if(userId===user.id){
-        message.warn('Your have leave this room').then()
-        RTCRef.current.closeSocket()
-        RTCRef.current.closeSocket()
+      if (userId === user.id) {
+        message.warn('Your have leave this room').then();
+        RTCRef.current.closeSocket();
       }
-      const onlineMembers = [...onMeetingUserRef.current].filter(u=>u!==userId);
-      const muteMembersIds = [...globalState.muteMembersIds].filter(u=>u!==userId);
+      const onlineMembers = [...onMeetingUserRef.current].filter(
+        (u) => u !== userId,
+      );
+      const muteMembersIds = [...globalState.muteMembersIds].filter(
+        (u) => u !== userId,
+      );
       dispatch({
         type: 'global/save',
         payload: {
           onlineMemberIds: onlineMembers,
-          muteMembersIds:muteMembersIds
+          muteMembersIds: muteMembersIds,
         },
       });
     },
     [onMeetingUserRef],
   );
 
-  const toggleMute = (bol: boolean,userId:string='') => {
-    let id = userId
-    if(!userId){
-      id =  user.id
+  const toggleMute = (bol: boolean, userId: string = '') => {
+    let id = userId;
+    if (!userId) {
+      id = user.id;
     }
-    const map =  globalState.userIdMappingStreamId
-    const streamId = map[id]
-    if(!streamId){return}
+    const map = globalState.userIdMappingStreamId;
+    const streamId = map[id];
+    if (!streamId) {
+      return;
+    }
     if (bol) {
       RTCRef.current.streamEvents[streamId].stream.mute('audio');
     } else {
@@ -203,14 +226,14 @@ const CustomTab = () => {
   };
 
   // 刪除用戶
-  const delMember = (id: string,userId:string) => {
+  const delMember = (id: string, userId: string) => {
     delProjectMemberAPI(id)
       .then((res) => {
         // 删除项目成员成功
         //  1.更新memberList 列表
-        if(res.code===0){
-          getMemberList(globalState.project.id).then(c=>{
-            if(c.code ===0){
+        if (res.code === 0) {
+          getMemberList(globalState.project.id).then((c) => {
+            if (c.code === 0) {
               dispatch({
                 type: 'global/save',
                 payload: {
@@ -218,20 +241,22 @@ const CustomTab = () => {
                 },
               });
             }
-          })
+          });
         }
-        noticeMemberChanged(globalState.project.id).then()
+        noticeMemberChanged(globalState.project.id).then();
 
         // 2.把他T出会议室，如果他在线的话
-        const map = globalState.userIdMappingStreamId
+        const map = globalState.userIdMappingStreamId;
         // 找出对应的stream Id
-        const streamId =  map[userId]
-        if(!streamId){return}
+        const streamId = map[userId];
+        if (!streamId) {
+          return;
+        }
         // RTCRef.current.removeStream(streamId);
-        RTCRef.current.deletePeer(userId);
-        RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'ended');
-        RTCRef.current.disconnectWith( userId )
-
+        // RTCRef.current.deletePeer(userId);
+        // RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'ended');
+        // RTCRef.current.disconnectWith( userId )
+        RTCRef.current.send(`tickTick#${userId}`);
       })
       .catch((e) => {
         console.log(e);
@@ -258,15 +283,17 @@ const CustomTab = () => {
     RTCRef.current.extra = {
       userId: user.id,
     };
-    RTCRef.current.userid = user.id
-    RTCRef.current.iceServers = [{
-      'urls': 'stun:8.218.125.220:3478',
-    }];
+    RTCRef.current.userid = user.id;
+    RTCRef.current.iceServers = [
+      {
+        urls: 'stun:8.218.125.220:3478',
+      },
+    ];
     RTCRef.current.iceServers.push({
       urls: 'turn:8.218.125.220:3478',
       credential: 'anxing123',
-      username: 'anxing'
-    })
+      username: 'anxing',
+    });
     RTCRef.current.onopen = function () {
       // RTCRef.current.send('hello every one')
       console.log(11111, 'room open...');
@@ -274,17 +301,23 @@ const CustomTab = () => {
     };
     RTCRef.current.onmute = muteOrUnMuteCallback;
     RTCRef.current.onunmute = muteOrUnMuteCallback;
-    RTCRef.current.connectSocket((socket:any)=>{
-      socket.on('muteSomebody', function() {
+    RTCRef.current.connectSocket((socket: any) => {
+      socket.on('muteSomebody', function () {
         alert(message);
       });
     });
-    RTCRef.current.onPeerStateChanged  = (state:any)=>{
-      if (state.iceConnectionState.search(/closed|failed|disconnected/gi) !== -1) {
-         // @ts-ignore
-        message.error('You had been ticked from the room').then()
-        window.location.reload()
+    RTCRef.current.onPeerStateChanged = (state: any) => {
+      console.log(state);
+      if (
+        state.iceConnectionState.search(/closed|failed|disconnected/gi) !== -1
+      ) {
+        // @ts-ignore
+        // message.error('You had been ticked from the room').then()
+        // window.location.reload()
       }
+    };
+    RTCRef.current.onclose = function (ev: any) {
+      console.log('on others close...', ev);
     };
     RTCRef.current.onmessage = callback;
     RTCRef.current.onstream = onStreamCallback;
@@ -301,12 +334,12 @@ const CustomTab = () => {
     });
   };
 
-  const onRoleChange = (mId:string,e:string)=>{
-    updateMemberRole(mId,e).then(res=>{
-      if(res.code ===0){
-        message.success('Update role success').then()
-        getMemberList(globalState.project.id).then(c=>{
-          if(c.code ===0){
+  const onRoleChange = (mId: string, e: string) => {
+    updateMemberRole(mId, e).then((res) => {
+      if (res.code === 0) {
+        message.success('Update role success').then();
+        getMemberList(globalState.project.id).then((c) => {
+          if (c.code === 0) {
             dispatch({
               type: 'global/save',
               payload: {
@@ -314,30 +347,58 @@ const CustomTab = () => {
               },
             });
           }
-        })
+        });
       }
-    })
-  }
+    });
+  };
 
   // mute or unmute others
-  const muteOrUnmuteOthers = (userId:string,flag:boolean)=>{
+  const muteOrUnmuteOthers = (userId: string, flag: boolean) => {
     // 1.先找出userId对应的streamId
-    const map =  globalState.userIdMappingStreamId
-    const streamId = map[userId]
-    if(!streamId){return}
+    const map = globalState.userIdMappingStreamId;
+    const streamId = map[userId];
+    if (!streamId) {
+      return;
+    }
     // 2.mute or unmute--->通知他，并且让他自己mute
-    if(flag){
+    if (flag) {
       RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'mute', 'audio');
-    }else{
+    } else {
       RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'unmute', 'audio');
     }
-  }
+  };
 
-  useEffect(()=>{
-    if(globalState.project.id){
-      goCreateOrJoinRoom()
+  const leaveRoomForMe = () => {
+    RTCRef.current.closeSocket();
+    RTCRef.current = null;
+    dispatch({
+      type: 'global/save',
+      payload: {
+        muteMembersIds: [],
+        onlineMemberIds: [],
+        roomId: '',
+      },
+    });
+  };
+
+  const tickMemberOutRoom = (userId: string) => {
+    console.log(userId);
+    // const map = globalState.userIdMappingStreamId
+    // // 找出对应的stream Id
+    // const streamId =  map[userId]
+    // if(!streamId){return}
+    // // RTCRef.current.removeStream(streamId);
+    // RTCRef.current.deletePeer(userId);
+    // RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'ended');
+    // RTCRef.current.disconnectWith( userId )
+    RTCRef.current.send(`tickTick#${userId}`);
+  };
+
+  useEffect(() => {
+    if (globalState.project.id) {
+      goCreateOrJoinRoom();
     }
-  },[globalState.project])
+  }, [globalState.project]);
   return (
     <Tabs
       activeKey={active}
@@ -383,6 +444,8 @@ const CustomTab = () => {
           goCreateOrJoinRoom={goCreateOrJoinRoom}
           onRoleChange={onRoleChange}
           muteOrUnmuteOthers={muteOrUnmuteOthers}
+          leaveRoomForMe={leaveRoomForMe}
+          tickMemberOutRoom={tickMemberOutRoom}
         />
       </TabPane>
       <TabPane tab="discuss" key="discuss">

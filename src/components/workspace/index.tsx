@@ -6,14 +6,14 @@ import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
 import { message, Spin } from 'antd';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, debounce } from 'lodash';
 import styles from './index.less';
 import { PlusOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
-import {debouncePushAction, getMemberList, noticeOffline, noticeOnline} from '@/services/api';
 import { connect } from 'umi';
+import { debouncePushAction, getMemberList } from '@/services/api';
 import { GlobalModelState } from '@/models/global';
 import { ConnectProps } from '@@/plugin-dva/connect';
 
@@ -50,12 +50,35 @@ const Workspace = ({
   const [socket, setSocket] = useState<any>(null);
   const [tab, setTab] = useState<Tab>('');
   const [showLoading, setShowLoading] = useState(false);
-  const { project: currentProject, userRoleInCurrentProject } = global;
+  const {
+    project: currentProject,
+    userRoleInCurrentProject,
+    currentTracks,
+  } = global;
 
   const onFileSelect = (file: any, type: 'cloud' | 'local') => {
     setIsNoneState(false);
     playContext.load([file]).then(() => {
       setTrackList([...playContext.tracks]);
+      dispatch?.({
+        type: 'global/update',
+        payload: {
+          currentTracks: [
+            ...currentTracks,
+            {
+              src: file.src,
+              name: file.name,
+              mute: false,
+              solo: false,
+              gain: 1,
+              stereoPan: 0,
+              copy: null,
+              cut: null,
+              startTime: 0,
+            },
+          ],
+        },
+      });
     });
     if (type === 'local') {
       setShowResource(false);
@@ -66,6 +89,26 @@ const Workspace = ({
   useEffect(() => {
     setToneCtx(Tone.getContext());
   }, []);
+
+  useEffect(() => {
+    if (trackList.length === 0 && currentTracks && currentTracks.length > 0) {
+      playContext.load(currentTracks).then(() => {
+        currentTracks.forEach((item: any, index: number) => {
+          if (item.mute) {
+            ee.emit('mute', playContext.tracks[index]);
+          }
+          if (item.solo) {
+            ee.emit('solo', playContext.tracks[index]);
+          }
+          if (item.startTime > 0) {
+            ee.emit('shift', item.startTime, playContext.tracks[index], 'auto');
+            ee.emit('statechange', 'select');
+          }
+        });
+        setTrackList([...playContext.tracks]);
+      });
+    }
+  }, [currentTracks]);
 
   const container = useCallback(
     (node) => {
@@ -184,6 +227,14 @@ const Workspace = ({
     ee.emit('removeTrack', playContext.tracks[index]);
     setTrackList([...playContext.tracks]);
     setIsNoneState(playContext.tracks.length === 0);
+    const tracks = cloneDeep(currentTracks);
+    tracks.splice(index, 1);
+    dispatch?.({
+      type: 'global/update',
+      payload: {
+        currentTracks: [...tracks],
+      },
+    });
     debouncePushAction(currentProject.id, 'removeTrack', { index });
   };
 
@@ -197,30 +248,33 @@ const Workspace = ({
     ee.emit('paste');
   };
 
-  const joinRoom = (projectId:string,projectName:string,key:string)=>{
-    notification.close(key)
+  const joinRoom = (projectId: string, projectName: string, key: string) => {
+    notification.close(key);
     dispatch?.({
       type: 'global/save',
-      payload:{
-        project: { id: projectId,name:projectName },
+      payload: {
+        project: { id: projectId, name: projectName },
       },
     });
-  }
+  };
 
-  const openNotification = (projectId:string,projectName:string) => {
+  const openNotification = (projectId: string, projectName: string) => {
     const key = `open${Date.now()}`;
     const btn = (
-      <Button type="primary" size="small" onClick={() => joinRoom(projectId,projectName,key)}>
+      <Button
+        type="primary"
+        size="small"
+        onClick={() => joinRoom(projectId, projectName, key)}
+      >
         Join
       </Button>
     );
     notification.open({
       message: 'Audio meeting Apply',
-      description:
-        'Invite you join Project,join Now?',
+      description: 'Invite you join Project,join Now?',
       btn,
       key,
-      duration:null,
+      duration: null,
     });
   };
 
@@ -234,48 +288,54 @@ const Workspace = ({
       });
       setSocket(io(`https://www.metaapp.fun?token=${token}`));
       // 广播一条消息，告诉别人我已经上线
-      noticeOnline(user.id).then()
+      // noticeOnline(user.id).then()
     }
 
-    const disconnectSocket = ()=>{
-      noticeOffline(user.id).then()
-    }
-     window.addEventListener('beforeunload',disconnectSocket)
-    return ()=>{
-      window.removeEventListener('beforeunload',disconnectSocket)
-    }
+    // const disconnectSocket = ()=>{
+    //   noticeOffline(user.id).then()
+    // }
+    //  window.addEventListener('beforeunload',disconnectSocket)
+    // return ()=>{
+    //   window.removeEventListener('beforeunload',disconnectSocket)
+    // }
   }, [token]);
 
   useEffect(() => {
     if (socket && playContext) {
       socket.removeAllListeners();
       socket.on('action', (arg: any) => {
-        if(arg.event === 'online'){
-          const {userId} = arg.extraBody
-          if(userId){
+        if (arg.event === 'user:online') {
+          const { id } = arg.extraBody;
+          if (id) {
+            console.log(id);
             let userSet = new Set(global.socketOnlineUserIds);
-            userSet.add(userId)
+            userSet.add(id);
             dispatch?.({
               type: 'global/save',
               payload: { socketOnlineUserIds: Array.from(userSet) },
             });
           }
+          return;
         }
-        if(arg.event === 'offline'){
-          const {userId} = arg.extraBody
-          if(userId){
-            let onlineUserIds = [...global.socketOnlineUserIds].filter(id=>id!==userId);
+        if (arg.event === 'user:offline') {
+          console.log('user offline...');
+          const { id } = arg.extraBody;
+          if (id) {
+            let onlineUserIds = [...global.socketOnlineUserIds].filter(
+              (userId) => userId !== id,
+            );
             dispatch?.({
               type: 'global/save',
-              payload: { socketOnlineUserIds:onlineUserIds},
+              payload: { socketOnlineUserIds: onlineUserIds },
             });
           }
+          return;
         }
-        if(arg.event === 'memberChanged'){
-          const {projectId} = arg.extraBody
-          if(projectId===global.project.id){
-            getMemberList(projectId).then(c=>{
-              if(c.code ===0){
+        if (arg.event === 'memberChanged') {
+          const { projectId } = arg.extraBody;
+          if (projectId === global.project.id) {
+            getMemberList(projectId).then((c) => {
+              if (c.code === 0) {
                 dispatch?.({
                   type: 'global/save',
                   payload: {
@@ -283,18 +343,20 @@ const Workspace = ({
                   },
                 });
               }
-            })
+            });
           }
+          return;
         }
-        if(arg.event === 'inviteMemberJoinRoom'){
-          const {projectId,userId,projectName} = arg.extraBody
+        if (arg.event === 'inviteMemberJoinRoom') {
+          const { projectId, userId, projectName } = arg.extraBody;
           const user = JSON.parse(localStorage.getItem('user') || '{}');
-          if(userId!==user.id){
+          if (userId !== user.id) {
             return;
           }
-          if(projectId!==global.project.id){
-            openNotification(projectId,projectName)
+          if (projectId !== global.project.id) {
+            openNotification(projectId, projectName);
           }
+          return;
         }
         const projectId = arg.project;
         if (projectId === currentProject.id) {
@@ -354,6 +416,17 @@ const Workspace = ({
                     },
                   },
                 });
+                break;
+              }
+              // 移动音轨
+              case 'changeShift': {
+                ee.emit(
+                  'shift',
+                  data.value - trackList[data.index].startTime,
+                  playContext.tracks[data.index],
+                  'auto',
+                );
+                break;
               }
             }
             message.success('Sync succeeded');

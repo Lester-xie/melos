@@ -3,11 +3,7 @@ import TopLeftBar from '@/components/topLeftBar';
 import Chat from '@/components/chat';
 import Workspace from '@/components/workspace';
 import { FC, useEffect, useRef, useState } from 'react';
-import {
-  debouncePushAction,
-  Login,
-  updateProjectNameAPI,
-} from '@/services/api';
+import { debouncePushAction, Login, updateProject } from '@/services/api';
 import { GlobalModelState, ConnectProps, Loading, connect } from 'umi';
 import { Input, message, Popover } from 'antd';
 import { UserInfo } from '@/models/global';
@@ -71,7 +67,7 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
 
   const onProjectNameEdit = (value: string) => {
     if (!value) return;
-    updateProjectNameAPI(currentProject.id, value).then((res) => {
+    updateProject(currentProject.id, value).then((res) => {
       if (res.code === 0) {
         setProjectNameFlag(false);
         message.success('Update success');

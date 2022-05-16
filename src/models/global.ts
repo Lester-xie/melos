@@ -1,9 +1,22 @@
 import { Effect, Reducer, Subscription } from 'umi';
+import { updateProject } from '@/services/api';
 
 export interface UserInfo {
   id: string;
   name: string;
   avatar: string;
+}
+
+export interface TrackInfo {
+  src: string;
+  name: string;
+  mute: boolean;
+  solo: boolean;
+  gain: number;
+  stereoPan: number;
+  copy: Array<any>;
+  cut: Array<any>;
+  startTime: number;
 }
 
 export interface GlobalModelState {
@@ -19,7 +32,8 @@ export interface GlobalModelState {
   userRoleInCurrentProject: string;
   socketConnectSuccess: true | false;
   socketOnlineUserIds: Array<string>;
-  userIdMappingStreamId: {[key:string]:string};
+  userIdMappingStreamId: { [key: string]: string };
+  currentTracks: Array<TrackInfo>;
 }
 
 export interface GlobalModelType {
@@ -30,6 +44,7 @@ export interface GlobalModelType {
   };
   reducers: {
     save: Reducer<GlobalModelState>;
+    update: Reducer<GlobalModelState>;
   };
   subscriptions: { setup: Subscription };
 }
@@ -50,7 +65,8 @@ const GlobalModel: GlobalModelType = {
     userRoleInCurrentProject: '',
     socketConnectSuccess: false,
     socketOnlineUserIds: [],
-    userIdMappingStreamId:{}
+    userIdMappingStreamId: {},
+    currentTracks: [],
   },
 
   effects: {
@@ -58,6 +74,17 @@ const GlobalModel: GlobalModelType = {
   },
   reducers: {
     save(state, action) {
+      return {
+        ...state,
+        ...action.payload,
+      };
+    },
+    update(state, action) {
+      const data = {
+        ...state,
+        ...action.payload,
+      };
+      updateProject(data.project.id, data.project.name, data.currentTracks);
       return {
         ...state,
         ...action.payload,
