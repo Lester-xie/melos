@@ -7,7 +7,7 @@ import call_invite from '../../assets/chat/call_invite.png';
 import mute from '../../assets/chat/mute.png';
 import unmute from '../../assets/chat/unmute.png';
 import tick from '../../assets/chat/tick.png';
-import { getUserList } from '@/services/api';
+import { getUserList,inviteUserJoinRoom} from '@/services/api';
 import defaultImg from '../../assets/chat/default.png';
 import styles from './index.less';
 
@@ -17,18 +17,19 @@ interface IMeeting {
   delMember: (id: string,userId:string) => void;
   goCreateOrJoinRoom: () => void;
   onRoleChange: (memberId:string,e:any) => void;
+  muteOrUnmuteOthers:(userId:string,flag:boolean) => void;
 }
 
 const { Option } = Select;
 const Meeting: React.FC<IMeeting> = (props) => {
-  const { toggleMute, delMember, goCreateOrJoinRoom,onRoleChange } = props;
+  const { toggleMute, delMember, goCreateOrJoinRoom,onRoleChange,muteOrUnmuteOthers } = props;
   const [userList, setUserList] = useState([]);
   const [selectValue, setSelectValue] = useState('');
   const globalState: GlobalModelState = useSelector(
     (state: any) => state.global,
   );
 
-  const { socketConnectSuccess } = globalState;
+  const { socketConnectSuccess,socketOnlineUserIds } = globalState;
   const [selfUser, setSelfUser] = useState<any>({
     user: {
       name: '',
@@ -59,9 +60,17 @@ const Meeting: React.FC<IMeeting> = (props) => {
   };
 
   // 拉起一个房间
-  const createOrJoinRoom = () => {
+  const createOrJoinRoom = (userId:string) => {
     // goCreateOrJoinRoom();
-    message.success('Message had been send').then()
+    // 1.判断他是否在线
+    if(!socketOnlineUserIds.includes(userId)){
+      message.warn('Member is offline,please try it later').then()
+      return;
+    }
+
+    inviteUserJoinRoom(userId,globalState.project.id,globalState.project.name).then(async ()=>{
+      await  message.success('Message had been send')
+    })
   };
 
   const unMuteMyself = () => {
@@ -85,6 +94,21 @@ const Meeting: React.FC<IMeeting> = (props) => {
     setSelectValue(value);
   };
 
+  const muteUnmuteOther = (userId:string,role:'admin'|'guest'|'editor',flag: boolean)=>{
+    // 判断是否在线
+    if(!globalState.onlineMemberIds.includes(userId)) return;
+    // 判断权限,guest 只能操作自己
+    if(selfUser.role==='guest'){
+      message.warn('You cant mute or unmute other member').then()
+      return
+    }
+    if(selfUser.role==='editor' && role!=='guest') {
+      message.warn('You cant mute or unmute this member').then()
+      return
+    }
+    muteOrUnmuteOthers(userId,flag)
+  }
+
   const inviteMember = () => {
     props.inviteUser(selectValue);
   };
@@ -106,8 +130,14 @@ const Meeting: React.FC<IMeeting> = (props) => {
         <div className={styles.right}>
           <div className={styles.name}>{selfUser.user.name}</div>
           <div className={styles.tag}>
-            {onlineMemberIds.includes(selfUser.user._id) &&
-            !muteMembersIds.includes(selfUser.user._id) ? (
+            {
+              globalState.onlineMemberIds.includes(selfUser.user._id) ? (
+                  <img src={callVoice} alt="callVoice" style={{marginRight:'5px'}}/>
+                ) : (
+                  <img src={call_invite} alt="callInvite" style={{marginRight:'5px'}}/>
+                )
+            }
+            {!muteMembersIds.includes(selfUser.user._id) ? (
               <img src={unmute} alt="callInvite" onClick={muteMyself} />
             ) : (
               <img src={mute} alt="callVoice" onClick={unMuteMyself} />
@@ -158,7 +188,10 @@ const Meeting: React.FC<IMeeting> = (props) => {
                       src={m.user?.avatar?.url || defaultImg}
                       alt={'avatar'}
                     />
-                    <span className={styles.status} />
+                    <span className={
+                      socketOnlineUserIds.includes(m.user._id)?
+                        [styles.status,styles.online].join(' '):
+                        styles.status} />
                   </div>
                   <div className={styles.right}>
                     <div className={styles.name}>{m.user?.name}</div>
@@ -185,19 +218,15 @@ const Meeting: React.FC<IMeeting> = (props) => {
                       <img
                         src={call_invite}
                         alt="callInvite"
-                        onClick={createOrJoinRoom}
+                        onClick={()=>createOrJoinRoom(m.user._id)}
                       />
                     )}
-                    {globalState.onlineMemberIds.includes(m.user._id) && (
-                      <>
-                        {globalState.muteMembersIds.includes(m.user._id) &&
-                        globalState.onlineMemberIds ? (
-                          <img src={mute} alt="callVoice" />
+                        {!globalState.muteMembersIds.includes(m.user._id) &&
+                        globalState.onlineMemberIds.includes(m.user._id) ? (
+                          <img src={unmute} alt="callVoice" onClick={()=>{muteUnmuteOther(m.user._id,m.role,true)}}/>
                         ) : (
-                          <img src={unmute} alt="callVoice" />
+                          <img src={mute} alt="callVoice" onClick={()=>{muteUnmuteOther(m.user._id,m.role,false)}}/>
                         )}
-                      </>
-                    )}
                   </div>
 
                   <div

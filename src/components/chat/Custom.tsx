@@ -14,7 +14,7 @@ import { socketPrefix } from '@/config';
 import {
   delProjectMemberAPI,
   getMemberList,
-  inviteProjectUser,
+  inviteProjectUser, noticeMemberChanged,
   updateMemberRole
 } from '@/services/api';
 const { TabPane } = Tabs;
@@ -34,6 +34,8 @@ const CustomTab = () => {
   const RTCRef = useRef<any>();
 
   const memberRef = useRef<Array<API.MemberType>>([]);
+  const onMeetingUserRef = useRef<Array<string>>([]);
+  const onMuteIdsRef = useRef<Array<string>>([]);
 
   const callback = useCallback(
     (event: any) => {
@@ -62,12 +64,20 @@ const CustomTab = () => {
     memberRef.current = globalState.memberList;
   }, [globalState.memberList]);
 
+  useEffect(() => {
+    onMeetingUserRef.current = globalState.onlineMemberIds;
+  }, [globalState.onlineMemberIds]);
+
+  useEffect(() => {
+    onMuteIdsRef.current = globalState.muteMembersIds;
+  }, [globalState.muteMembersIds]);
+
   const muteOrUnMuteCallback = useCallback(
     (event: any) => {
-      console.log(event, 'mute or unmute');
-      const { extra, isAudioMuted } = event;
+      const {extra, isAudioMuted } = event;
       const userId = extra.userId;
-      const muteIds = [...globalState.muteMembersIds];
+
+      const muteIds = [...onMuteIdsRef.current];
       let ids: Array<string> = [];
       if (isAudioMuted) {
         const muteSet = new Set(muteIds);
@@ -84,7 +94,71 @@ const CustomTab = () => {
         },
       });
     },
-    [memberRef],
+    [onMuteIdsRef],
+  );
+
+  const muteOrUnMuteSomeBodyCallback = ()=>{
+    console.log(123)
+  }
+
+  const onStreamCallback = useCallback(
+    (event: any) => {
+      console.log('on stream...')
+      const {extra, stream } = event;
+      const userId = extra.userId;
+      const { isAudio } = stream;
+      if (!isAudio) {
+        //mute add
+        let muteSet = new Set(globalState.muteMembersIds);
+        muteSet.add(userId);
+        const arr = Array.from(muteSet);
+        dispatch({
+          type: 'global/save',
+          payload: {
+            muteMembersIds: arr,
+          },
+        });
+      }
+      let onlineMemberIdsSet = new Set(onMeetingUserRef.current);
+      console.log(onlineMemberIdsSet)
+      onlineMemberIdsSet.add(userId);
+      const onlineMembers = Array.from(onlineMemberIdsSet);
+      // 生成userid 和 streamId的map关系
+      let map = globalState.userIdMappingStreamId
+      map[userId] =stream.streamid
+      dispatch({
+        type: 'global/save',
+        payload: {
+          onlineMemberIds: onlineMembers,
+          userIdMappingStreamId: map,
+        },
+      });
+    },
+    [onMeetingUserRef],
+  );
+
+  // 媒体流结束 onstreamended
+  const onstreamendedCallback = useCallback(
+    (event: any) => {
+      console.log('on stream end...',event)
+      const {extra } = event;
+      const userId = extra.userId;
+      if(userId===user.id){
+        message.warn('Your have leave this room').then()
+        RTCRef.current.closeSocket()
+        RTCRef.current.closeSocket()
+      }
+      const onlineMembers = [...onMeetingUserRef.current].filter(u=>u!==userId);
+      const muteMembersIds = [...globalState.muteMembersIds].filter(u=>u!==userId);
+      dispatch({
+        type: 'global/save',
+        payload: {
+          onlineMemberIds: onlineMembers,
+          muteMembersIds:muteMembersIds
+        },
+      });
+    },
+    [onMeetingUserRef],
   );
 
   const toggleMute = (bol: boolean,userId:string='') => {
@@ -146,6 +220,7 @@ const CustomTab = () => {
             }
           })
         }
+        noticeMemberChanged(globalState.project.id).then()
 
         // 2.把他T出会议室，如果他在线的话
         const map = globalState.userIdMappingStreamId
@@ -154,6 +229,8 @@ const CustomTab = () => {
         if(!streamId){return}
         // RTCRef.current.removeStream(streamId);
         RTCRef.current.deletePeer(userId);
+        RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'ended');
+        RTCRef.current.disconnectWith( userId )
 
       })
       .catch((e) => {
@@ -197,55 +274,21 @@ const CustomTab = () => {
     };
     RTCRef.current.onmute = muteOrUnMuteCallback;
     RTCRef.current.onunmute = muteOrUnMuteCallback;
+    RTCRef.current.connectSocket((socket:any)=>{
+      socket.on('muteSomebody', function() {
+        alert(message);
+      });
+    });
     RTCRef.current.onPeerStateChanged  = (state:any)=>{
-      console.log(111111111111111111,state)
       if (state.iceConnectionState.search(/closed|failed|disconnected/gi) !== -1) {
          // @ts-ignore
-        message.error('You had been ticked from the project').then()
+        message.error('You had been ticked from the room').then()
         window.location.reload()
       }
     };
     RTCRef.current.onmessage = callback;
-    RTCRef.current.onstream = function (event: any) {
-      const { type,extra, stream } = event;
-
-      console.log(222,stream)
-      // if(type==='local'){
-      //   console.log(121212)
-      //   RTCRef.current.streamEvents[stream.streamId].stream.mute('audio');
-      // }
-
-      const userId = extra.userId;
-
-
-      const { isAudio } = stream;
-      if (!isAudio) {
-        //mute add
-        let muteSet = new Set(globalState.muteMembersIds);
-        muteSet.add(userId);
-        const arr = Array.from(muteSet);
-        dispatch({
-          type: 'global/save',
-          payload: {
-            muteMembersIds: arr,
-          },
-        });
-      }
-      let onlineMemberIdsSet = new Set(globalState.onlineMemberIds);
-      onlineMemberIdsSet.add(userId);
-      const onlineMembers = Array.from(onlineMemberIdsSet);
-
-      // 生成userid 和 streamId的map关系
-       let map = globalState.userIdMappingStreamId
-       map[userId] =stream.streamid
-      dispatch({
-        type: 'global/save',
-        payload: {
-          onlineMemberIds: onlineMembers,
-          userIdMappingStreamId: map,
-        },
-      });
-    };
+    RTCRef.current.onstream = onStreamCallback;
+    RTCRef.current.onstreamended = onstreamendedCallback;
 
     RTCRef.current.openOrJoin(roomId);
     message.success('Join Room success').then();
@@ -274,6 +317,20 @@ const CustomTab = () => {
         })
       }
     })
+  }
+
+  // mute or unmute others
+  const muteOrUnmuteOthers = (userId:string,flag:boolean)=>{
+    // 1.先找出userId对应的streamId
+    const map =  globalState.userIdMappingStreamId
+    const streamId = map[userId]
+    if(!streamId){return}
+    // 2.mute or unmute--->通知他，并且让他自己mute
+    if(flag){
+      RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'mute', 'audio');
+    }else{
+      RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'unmute', 'audio');
+    }
   }
 
   useEffect(()=>{
@@ -325,6 +382,7 @@ const CustomTab = () => {
           delMember={delMember}
           goCreateOrJoinRoom={goCreateOrJoinRoom}
           onRoleChange={onRoleChange}
+          muteOrUnmuteOthers={muteOrUnmuteOthers}
         />
       </TabPane>
       <TabPane tab="discuss" key="discuss">

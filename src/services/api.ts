@@ -185,3 +185,57 @@ export async function updateMemberRole(memberId: string,role:string) {
     }
   });
 }
+
+// 通知别人我已经上线socket
+export async function noticeOnline(useId:string){
+   return request('project/action/create',{
+     method: 'POST',
+     data: {
+       event: "online",
+       extraBody: {
+         userId: useId
+       }
+     }
+   })
+}
+
+// 通知别人我下线socket
+export async function noticeOffline(useId:string){
+  return request('project/action/create',{
+    method: 'POST',
+    data: {
+      event: "offline",
+      extraBody: {
+        userId: useId
+      }
+    }
+  })
+}
+
+// 通知成员发生了变化
+export async function noticeMemberChanged(projectId:string){
+  return request('project/action/create',{
+    method: 'POST',
+    data: {
+      event: "memberChanged",
+      extraBody: {
+        projectId
+      }
+    }
+  })
+}
+
+// 邀请用户加入房间
+export async function inviteUserJoinRoom(userId:string,projectId:string,projectName:string){
+  return request('project/action/create',{
+    method: 'POST',
+    data: {
+      event: "inviteMemberJoinRoom",
+      extraBody: {
+        projectId,
+        userId,
+        projectName
+      }
+    }
+  })
+}

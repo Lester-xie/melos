@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
+import { Button, notification } from 'antd';
 import EventEmitter from 'events';
 //@ts-ignore
 import WaveformPlaylist from '../../waveform-playlist/src/app.js';
@@ -11,7 +12,7 @@ import { PlusOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
-import { debouncePushAction } from '@/services/api';
+import {debouncePushAction, getMemberList, noticeOffline, noticeOnline} from '@/services/api';
 import { connect } from 'umi';
 import { GlobalModelState } from '@/models/global';
 import { ConnectProps } from '@@/plugin-dva/connect';
@@ -196,7 +197,35 @@ const Workspace = ({
     ee.emit('paste');
   };
 
+  const joinRoom = (projectId:string,projectName:string,key:string)=>{
+    notification.close(key)
+    dispatch?.({
+      type: 'global/save',
+      payload:{
+        project: { id: projectId,name:projectName },
+      },
+    });
+  }
+
+  const openNotification = (projectId:string,projectName:string) => {
+    const key = `open${Date.now()}`;
+    const btn = (
+      <Button type="primary" size="small" onClick={() => joinRoom(projectId,projectName,key)}>
+        Join
+      </Button>
+    );
+    notification.open({
+      message: 'Audio meeting Apply',
+      description:
+        'Invite you join Project,join Now?',
+      btn,
+      key,
+      duration:null,
+    });
+  };
+
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (token) {
       socket?.disconnect();
       dispatch?.({
@@ -204,6 +233,16 @@ const Workspace = ({
         payload: { socketConnectSuccess: false },
       });
       setSocket(io(`https://www.metaapp.fun?token=${token}`));
+      // 广播一条消息，告诉别人我已经上线
+      noticeOnline(user.id).then()
+    }
+
+    const disconnectSocket = ()=>{
+      noticeOffline(user.id).then()
+    }
+     window.addEventListener('beforeunload',disconnectSocket)
+    return ()=>{
+      window.removeEventListener('beforeunload',disconnectSocket)
     }
   }, [token]);
 
@@ -211,6 +250,52 @@ const Workspace = ({
     if (socket && playContext) {
       socket.removeAllListeners();
       socket.on('action', (arg: any) => {
+        if(arg.event === 'online'){
+          const {userId} = arg.extraBody
+          if(userId){
+            let userSet = new Set(global.socketOnlineUserIds);
+            userSet.add(userId)
+            dispatch?.({
+              type: 'global/save',
+              payload: { socketOnlineUserIds: Array.from(userSet) },
+            });
+          }
+        }
+        if(arg.event === 'offline'){
+          const {userId} = arg.extraBody
+          if(userId){
+            let onlineUserIds = [...global.socketOnlineUserIds].filter(id=>id!==userId);
+            dispatch?.({
+              type: 'global/save',
+              payload: { socketOnlineUserIds:onlineUserIds},
+            });
+          }
+        }
+        if(arg.event === 'memberChanged'){
+          const {projectId} = arg.extraBody
+          if(projectId===global.project.id){
+            getMemberList(projectId).then(c=>{
+              if(c.code ===0){
+                dispatch?.({
+                  type: 'global/save',
+                  payload: {
+                    memberList: c.data.result,
+                  },
+                });
+              }
+            })
+          }
+        }
+        if(arg.event === 'inviteMemberJoinRoom'){
+          const {projectId,userId,projectName} = arg.extraBody
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          if(userId!==user.id){
+            return;
+          }
+          if(projectId!==global.project.id){
+            openNotification(projectId,projectName)
+          }
+        }
         const projectId = arg.project;
         if (projectId === currentProject.id) {
           const { type, token: actionToken, data } = arg.extraBody;
