@@ -174,7 +174,8 @@ const TopLeftBar = () => {
                   <img
                     src={EditIcon}
                     alt={'edit'}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation()
                       setUpdatingProject({ name: p.name, id: p._id });
                     }}
                   />
@@ -216,7 +217,7 @@ const TopLeftBar = () => {
                     {moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}
                   </div>
                 </div>
-                <div className={styles.options}>
+                <div className={styles.options} onClick={e=>e.stopPropagation()}>
                   <img
                     src={EditIcon}
                     alt={'edit'}
