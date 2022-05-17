@@ -742,6 +742,7 @@ export default class {
           activeTrack.startTime = timeSelection.start;
         } else {
           alert('the select area is too short');
+          return;
         }
       } else if (timeSelection.start >= activeTrack.endTime) {
         // 插入到左侧
@@ -779,6 +780,7 @@ export default class {
           activeTrack.endTime = timeSelection.end + (end - start);
         } else {
           alert('the select area is too short');
+          return;
         }
       }
 
