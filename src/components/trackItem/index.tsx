@@ -102,35 +102,66 @@ export default function TrackItem({
 
     trackItem.ee.on('shift', handleShift);
 
-    const handleCutfinishd = (start: number, end: number, track: any) => {
+    const handleCutFinishd = (start: number, end: number, track: any) => {
       if (track._id === trackItem._id) {
         const cloneTrackList = cloneDeep(currentTracks);
-        console.log(cloneTrackList);
-        if (cloneTrackList[index].cut) {
-          cloneTrackList[index].cut.push({ start, end });
-        } else {
-          cloneTrackList[index].cut = [{ start, end }];
+        if (cloneTrackList.length > 0) {
+          if (cloneTrackList[index].cut) {
+            cloneTrackList[index].cut.push({ start, end });
+          } else {
+            cloneTrackList[index].cut = [{ start, end }];
+          }
+          dispatch({
+            type: 'global/update',
+            payload: {
+              currentTracks: [...cloneTrackList],
+            },
+          });
+          debouncePushAction(currentProject.id, 'changeCut', {
+            index,
+            start,
+            end,
+          });
         }
-        dispatch({
-          type: 'global/update',
-          payload: {
-            currentTracks: [...cloneTrackList],
-          },
-        });
-        debouncePushAction(currentProject.id, 'changeCut', {
-          index,
-          start,
-          end,
-        });
       }
     };
 
-    trackItem.ee.on('cutfinishd', handleCutfinishd);
+    trackItem.ee.on('cutfinishd', handleCutFinishd);
 
-    return () => {
-      trackItem.ee.off('shift', handleShift);
-      trackItem.ee.off('cutfinishd', handleCutfinishd);
+    const handlePasteFinished = (
+      start: number,
+      end: number,
+      position: number,
+      track: any,
+    ) => {
+      if (track._id === trackItem._id) {
+        const cloneTrackList = cloneDeep(currentTracks);
+        console.log('cloneTrackList: ', cloneTrackList);
+        console.log('index: ', index);
+        console.log('trackItem: ', trackItem);
+        if (cloneTrackList.length > 0) {
+          if (cloneTrackList[index].copy) {
+            cloneTrackList[index].copy.push({ start, end, position });
+          } else {
+            cloneTrackList[index].copy = [{ start, end, position }];
+          }
+          dispatch({
+            type: 'global/update',
+            payload: {
+              currentTracks: [...cloneTrackList],
+            },
+          });
+          debouncePushAction(currentProject.id, 'changeCopy', {
+            index,
+            start,
+            position,
+            end,
+          });
+        }
+      }
     };
+
+    trackItem.ee.on('pastefinished', handlePasteFinished);
   }, [trackItem, currentTracks]);
 
   const onMuteToggle = useCallback(() => {

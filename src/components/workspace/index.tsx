@@ -106,6 +106,13 @@ const Workspace = ({
               ee.emit('cut', i.start, i.end, index);
             });
           }
+          if (item.copy && item.copy.length > 0) {
+            item.copy.forEach(
+              (i: { start: number; end: number; position: number }) => {
+                ee.emit('autoPaste', i.start, i.end, i.position, index);
+              },
+            );
+          }
         });
         setTrackList([...playContext.tracks]);
       });
@@ -358,6 +365,7 @@ const Workspace = ({
               case 'addTrack': {
                 playContext.load([data]).then(() => {
                   setTrackList([...playContext.tracks]);
+                  setIsNoneState(playContext.tracks.length === 0);
                 });
                 break;
               }
@@ -421,6 +429,17 @@ const Workspace = ({
               // 剪辑音轨
               case 'changeCut': {
                 ee.emit('cut', data.start, data.end, data.index);
+                break;
+              }
+              // 复制音轨
+              case 'changeCopy': {
+                ee.emit(
+                  'autoPaste',
+                  data.start,
+                  data.end,
+                  data.position,
+                  data.index,
+                );
                 break;
               }
             }

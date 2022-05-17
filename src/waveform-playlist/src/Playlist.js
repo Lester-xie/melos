@@ -485,6 +485,173 @@ export default class {
       const appendLen = endIdx - startIdx;
 
       const timeSelection = this.timeSelection;
+      console.log('timeSelection: ', timeSelection);
+      if (timeSelection.start != timeSelection.end) {
+        console.warn('请选择一个复制的位置，黄线指示的位置');
+        return;
+      }
+
+      console.log('将被复制到（秒）: ', timeSelection.start);
+
+      const { startTime, endTime } = activeTrack;
+      // 创建一个新的 audio buffer
+      const activeAudioBuffer = activeTrack.buffer;
+      const copyedAudioBuffer = copyedTrack.buffer;
+
+      const len = activeAudioBuffer.length;
+      const numberOfChannels = activeAudioBuffer.numberOfChannels;
+      let newBuffer = null;
+
+      if (
+        timeSelection.start < activeTrack.endTime &&
+        timeSelection.start > activeTrack.startTime
+      ) {
+        const pasteAt = secondsToSamples(
+          timeSelection.start - activeTrack.startTime,
+          sampleRate,
+        );
+        // 复制在中间
+        newBuffer = this.ac.createBuffer(
+          numberOfChannels,
+          len + appendLen,
+          sampleRate,
+        );
+
+        for (var channel = 0; channel < numberOfChannels; channel++) {
+          var oldBuffering = activeAudioBuffer.getChannelData(channel);
+          var newBuufering = newBuffer.getChannelData(channel);
+          var copyedBuffering = copyedAudioBuffer.getChannelData(channel);
+
+          // 填充 pasteAt 之前的数据
+          for (var i = 0; i < pasteAt; i++) {
+            newBuufering[i] = oldBuffering[i];
+          }
+
+          // 填充 pasteAt 后的数据
+          for (var i = pasteAt; i < len; i++) {
+            newBuufering[i + appendLen] = oldBuffering[i];
+          }
+
+          // 填充复制的数据
+          for (var i = pasteAt; i < pasteAt + appendLen; i++) {
+            newBuufering[i] = copyedBuffering[startIdx + i - pasteAt];
+          }
+        }
+
+        console.log('new buffer:', newBuffer);
+      } else if (timeSelection.start < activeTrack.startTime) {
+        // 插入到左侧
+        const newDuration = activeTrack.endTime - timeSelection.start;
+        const whiteDuration =
+          activeTrack.startTime - timeSelection.start - (end - start);
+        if (whiteDuration >= 0) {
+          newBuffer = this.ac.createBuffer(
+            numberOfChannels,
+            secondsToSamples(newDuration, sampleRate),
+            sampleRate,
+          );
+
+          for (var channel = 0; channel < numberOfChannels; channel++) {
+            var oldBuffering = activeAudioBuffer.getChannelData(channel);
+            var newBuufering = newBuffer.getChannelData(channel);
+            var copyedBuffering = copyedAudioBuffer.getChannelData(channel);
+
+            // 填充复制的数据
+            for (var i = 0; i < appendLen; i++) {
+              newBuufering[i] = copyedBuffering[startIdx + i];
+            }
+
+            // 填充空白数据
+            const whiteLen = secondsToSamples(whiteDuration, sampleRate);
+            for (var i = appendLen; i < appendLen + whiteLen; i++) {
+              newBuufering[i] = 0;
+            }
+
+            // 填充原始数据
+            for (var i = 0; i < len; i++) {
+              newBuufering[i + appendLen + whiteLen] = oldBuffering[i];
+            }
+          }
+
+          activeTrack.startTime = timeSelection.start;
+        } else {
+          alert('the select area is too short');
+        }
+      } else if (timeSelection.start >= activeTrack.endTime) {
+        // 插入到左侧
+        const newDuration = timeSelection.start + (end - start);
+        const whiteDuration = timeSelection.start - activeTrack.endTime;
+        if (whiteDuration >= 0) {
+          newBuffer = this.ac.createBuffer(
+            numberOfChannels,
+            secondsToSamples(newDuration, sampleRate),
+            sampleRate,
+          );
+
+          for (var channel = 0; channel < numberOfChannels; channel++) {
+            var oldBuffering = activeAudioBuffer.getChannelData(channel);
+            var newBuufering = newBuffer.getChannelData(channel);
+            var copyedBuffering = copyedAudioBuffer.getChannelData(channel);
+
+            // 填充原始数据
+            for (var i = 0; i < len; i++) {
+              newBuufering[i] = oldBuffering[i];
+            }
+
+            // 填充空白数据
+            const whiteLen = secondsToSamples(whiteDuration, sampleRate);
+            for (var i = len; i < len + whiteLen; i++) {
+              newBuufering[i] = 0;
+            }
+
+            // 填充复制的数据
+            for (var i = 0; i < appendLen; i++) {
+              newBuufering[i + len + whiteLen] = copyedBuffering[startIdx + i];
+            }
+          }
+
+          activeTrack.endTime = timeSelection.end + (end - start);
+        } else {
+          alert('the select area is too short');
+        }
+      }
+
+      this.copy = null;
+
+      this.ee.emit(
+        'pastefinished',
+        start,
+        end,
+        timeSelection.start,
+        copyedTrack,
+      );
+
+      activeTrack.setBuffer(newBuffer);
+      activeTrack.setCues(0, newBuffer.duration); //必不可少，否则频谱图不会变
+      activeTrack.calculatePeaks(this.samplesPerPixel, sampleRate);
+      // webaudio specific playout for now.
+      const playout = new Playout(this.ac, newBuffer, this.masterGainNode);
+      activeTrack.setPlayout(playout);
+
+      this.adjustDuration();
+      this.drawRequest();
+      this.draw(this.render());
+    });
+
+    ee.on('autoPaste', (s, e, position, index) => {
+      const activeTrack = this.tracks[index];
+      if (!activeTrack) {
+        return;
+      }
+      const start = s;
+      const end = e;
+      const copyedTrack = activeTrack;
+      const sampleRate = activeTrack.buffer.sampleRate; // TODO 不同音频复制，可能需要转换采样率
+      const startIdx = secondsToSamples(start, sampleRate);
+      const endIdx = secondsToSamples(end, sampleRate);
+      const appendLen = endIdx - startIdx;
+
+      const timeSelection = { start: position, end: position };
       if (timeSelection.start != timeSelection.end) {
         console.warn('请选择一个复制的位置，黄线指示的位置');
         return;

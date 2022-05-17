@@ -18,13 +18,15 @@ export default function TrackList(props: Props) {
   const onShift = useCallback(
     (value: number, index: number) => {
       const tracks = cloneDeep(currentTracks);
-      tracks[index].startTime = value;
-      dispatch?.({
-        type: 'global/update',
-        payload: {
-          currentTracks: [...tracks],
-        },
-      });
+      if (tracks.length > 0) {
+        tracks[index].startTime = value;
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...tracks],
+          },
+        });
+      }
     },
     [currentTracks],
   );
@@ -32,13 +34,15 @@ export default function TrackList(props: Props) {
   const onMute = useCallback(
     (mute: boolean, index: number) => {
       const tracks = cloneDeep(currentTracks);
-      tracks[index].mute = mute;
-      dispatch?.({
-        type: 'global/update',
-        payload: {
-          currentTracks: [...tracks],
-        },
-      });
+      if (tracks.length > 0) {
+        tracks[index].mute = mute;
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...tracks],
+          },
+        });
+      }
     },
     [currentTracks],
   );
@@ -46,13 +50,15 @@ export default function TrackList(props: Props) {
   const onSolo = useCallback(
     (solo: boolean, index: number) => {
       const tracks = cloneDeep(currentTracks);
-      tracks[index].solo = solo;
-      dispatch?.({
-        type: 'global/update',
-        payload: {
-          currentTracks: [...tracks],
-        },
-      });
+      if (tracks.length > 0) {
+        tracks[index].solo = solo;
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...tracks],
+          },
+        });
+      }
     },
     [currentTracks],
   );
