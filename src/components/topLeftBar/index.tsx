@@ -135,7 +135,7 @@ const TopLeftBar = () => {
           name,
           id,
         },
-        currentTracks: tracks || null,
+        currentTracks: tracks || [],
       },
     });
   };

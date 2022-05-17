@@ -149,7 +149,6 @@
   .resourceWrap {
     display: flex;
     height: calc(100vh - 146px);
-    position: relative;
     overflow-y: auto;
   }
 
@@ -175,6 +174,7 @@
       display: flex;
 
       .trackList {
+        display: none;
         flex: 1;
 
         :global(.channel-wrapper) {
@@ -189,4 +189,8 @@
       }
     }
   }
+}
+
+.visible {
+  display: block !important;
 }

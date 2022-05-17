@@ -25,7 +25,7 @@ interface Props {
   index: number;
 }
 
-type ShiftType = 'mouse' | 'auto';
+type ShiftType = 'auto' | 'manual';
 
 export default function TrackItem({
   trackItem,
@@ -50,13 +50,13 @@ export default function TrackItem({
     (state: any) => state.global.project,
   );
 
-  const trackList = useSelector((state: any) => state.global.currentTracks);
+  const currentTracks = useSelector((state: any) => state.global.currentTracks);
 
   const dispatch = useDispatch();
 
   useEffect(() => {
     if (debouncedStartTime !== null) {
-      if (debouncedShiftType === 'mouse') {
+      if (debouncedShiftType === 'manual') {
         onShift(debouncedStartTime, index);
         debouncePushAction(currentProject.id, 'changeShift', {
           value: debouncedStartTime,
@@ -93,11 +93,45 @@ export default function TrackItem({
       );
     });
 
-    trackItem.ee.on('shift', (deltaTime: any, track: any, type: ShiftType) => {
-      setShiftType(type);
-      setStartTime(trackItem.getStartTime());
-    });
-  }, [trackItem]);
+    const handleShift = (deltaTime: any, track: any, type: ShiftType) => {
+      if (track._id === trackItem._id) {
+        setShiftType(type);
+        setStartTime(trackItem.getStartTime());
+      }
+    };
+
+    trackItem.ee.on('shift', handleShift);
+
+    const handleCutfinishd = (start: number, end: number, track: any) => {
+      if (track._id === trackItem._id) {
+        const cloneTrackList = cloneDeep(currentTracks);
+        console.log(cloneTrackList);
+        if (cloneTrackList[index].cut) {
+          cloneTrackList[index].cut.push({ start, end });
+        } else {
+          cloneTrackList[index].cut = [{ start, end }];
+        }
+        dispatch({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...cloneTrackList],
+          },
+        });
+        debouncePushAction(currentProject.id, 'changeCut', {
+          index,
+          start,
+          end,
+        });
+      }
+    };
+
+    trackItem.ee.on('cutfinishd', handleCutfinishd);
+
+    return () => {
+      trackItem.ee.off('shift', handleShift);
+      trackItem.ee.off('cutfinishd', handleCutfinishd);
+    };
+  }, [trackItem, currentTracks]);
 
   const onMuteToggle = useCallback(() => {
     trackItem.ee.emit('mute', trackItem, (isInMutedTrack: boolean) => {
@@ -113,7 +147,7 @@ export default function TrackItem({
       onSolo(isInSoloedTrack, index);
     });
     debouncePushAction(currentProject.id, 'changeSolo', { index });
-  }, [trackItem, solo, trackList]);
+  }, [trackItem, solo, currentTracks]);
 
   useEffect(() => {
     setGain(trackItem?.gain * 100);
@@ -127,7 +161,7 @@ export default function TrackItem({
     (value: number) => {
       setGain(value);
       trackItem.ee.emit('volumechange', value, trackItem);
-      const cloneTrackList = cloneDeep(trackList);
+      const cloneTrackList = cloneDeep(currentTracks);
       cloneTrackList[index].gain = value / 100;
       dispatch({
         type: 'global/update',
@@ -137,14 +171,14 @@ export default function TrackItem({
       });
       debouncePushAction(currentProject.id, 'changeVolume', { value, index });
     },
-    [trackItem, trackList],
+    [trackItem, currentTracks],
   );
 
   const onStereoChange = useCallback(
     (value: number) => {
       setStereopan(value);
       trackItem.ee.emit('stereopan', value / 100, trackItem);
-      const cloneTrackList = cloneDeep(trackList);
+      const cloneTrackList = cloneDeep(currentTracks);
       cloneTrackList[index].stereoPan = value / 100;
       dispatch({
         type: 'global/update',
@@ -157,7 +191,7 @@ export default function TrackItem({
         index,
       });
     },
-    [trackItem, trackList],
+    [trackItem, currentTracks],
   );
 
   const onPlay = useCallback(() => {

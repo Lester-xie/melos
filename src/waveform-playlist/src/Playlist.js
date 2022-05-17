@@ -335,12 +335,7 @@ export default class {
     });
 
     ee.on('newtrack', (file) => {
-      this.load([
-        {
-          src: file,
-          name: file.name,
-        },
-      ]);
+      this.load([file]);
     });
 
     ee.on('trim', () => {
@@ -394,11 +389,65 @@ export default class {
       this.drawRequest();
       this.draw(this.render());
 
+      this.ee.emit('cutfinishd', start, end, activeTrack);
+
       // track.trim(timeSelection.start, timeSelection.end);
       // track.calculatePeaks(this.samplesPerPixel, this.sampleRate);
 
       // this.setTimeSelection(0, 0);
       // this.drawRequest();
+    });
+
+    ee.on('cut', (start, end, index) => {
+      const activeTrack = this.tracks[index];
+      if (!activeTrack) {
+        return;
+      }
+
+      const sampleRate = activeTrack.buffer.sampleRate;
+      const startIdx = secondsToSamples(start, sampleRate);
+      const endIdx = secondsToSamples(end, sampleRate);
+
+      const activeAudioBuffer = activeTrack.buffer;
+
+      const len = activeAudioBuffer.length;
+      const numberOfChannels = activeAudioBuffer.numberOfChannels;
+      const newBuffer = this.ac.createBuffer(
+        numberOfChannels,
+        len - (endIdx - startIdx),
+        sampleRate,
+      );
+
+      for (var channel = 0; channel < numberOfChannels; channel++) {
+        var oldBuffering = activeAudioBuffer.getChannelData(channel);
+        var newBuufering = newBuffer.getChannelData(channel);
+
+        // 填充 选择区域前面的数据
+        let newBufferIdx = 0;
+        for (var i = 0; i < startIdx; i++) {
+          newBuufering[newBufferIdx] = oldBuffering[i];
+          newBufferIdx++;
+        }
+
+        // 填充 选择区域后面的数据
+        for (var i = endIdx; i < len; i++) {
+          newBuufering[newBufferIdx] = oldBuffering[i];
+          newBufferIdx++;
+        }
+      }
+      this.selection;
+
+      activeTrack.setBuffer(newBuffer);
+      activeTrack.setCues(0, newBuffer.duration); //必不可少，否则频谱图不会变
+      activeTrack.calculatePeaks(this.samplesPerPixel, sampleRate);
+      // webaudio specific playout for now.
+      const playout = new Playout(this.ac, newBuffer, this.masterGainNode);
+      activeTrack.setPlayout(playout);
+
+      this.setTimeSelection(0, 0);
+      this.adjustDuration();
+      this.drawRequest();
+      this.draw(this.render());
     });
 
     ee.on('copy', () => {

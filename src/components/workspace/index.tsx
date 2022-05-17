@@ -6,7 +6,7 @@ import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
 import { message, Spin } from 'antd';
-import { cloneDeep, debounce } from 'lodash';
+import { cloneDeep } from 'lodash';
 import styles from './index.less';
 import { PlusOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
 import Resource from '@/components/resource';
@@ -80,9 +80,6 @@ const Workspace = ({
         },
       });
     });
-    if (type === 'local') {
-      setShowResource(false);
-    }
     debouncePushAction(currentProject.id, 'addTrack', file);
   };
 
@@ -91,7 +88,7 @@ const Workspace = ({
   }, []);
 
   useEffect(() => {
-    if (trackList.length === 0 && currentTracks && currentTracks.length > 0) {
+    if (trackList.length === 0 && currentTracks.length > 0) {
       playContext.load(currentTracks).then(() => {
         currentTracks.forEach((item: any, index: number) => {
           if (item.mute) {
@@ -103,6 +100,11 @@ const Workspace = ({
           if (item.startTime > 0) {
             ee.emit('shift', item.startTime, playContext.tracks[index], 'auto');
             ee.emit('statechange', 'select');
+          }
+          if (item.cut && item.cut.length > 0) {
+            item.cut.forEach((i: { start: number; end: number }) => {
+              ee.emit('cut', i.start, i.end, index);
+            });
           }
         });
         setTrackList([...playContext.tracks]);
@@ -147,22 +149,11 @@ const Workspace = ({
         });
 
         ee.on('audiosourcesloaded', function () {
-          setPlayContext(null);
           setShowLoading(false);
         });
 
-        ee.on('audiosourcesrendered', function () {
-          setPlayContext(playlist);
-        });
-
-        ee.on('select', function (start, end, track) {
-          // console.log(start, end, track);
-        });
-
         ee.on('audiosourcesstartload', (trackList) => {
-          if (trackList.length > 0) {
-            setShowLoading(true);
-          }
+          setShowLoading(true);
         });
 
         playlist.load(trackList).then(() => {
@@ -199,7 +190,7 @@ const Workspace = ({
   };
 
   const onTrimBtnClicked = () => {
-    ee.emit('trim');
+    ee.emit('trim', 'manual');
   };
 
   const onDownloadBtnClicked = () => {
@@ -307,7 +298,6 @@ const Workspace = ({
         if (arg.event === 'user:online') {
           const { id } = arg.extraBody;
           if (id) {
-            console.log(id);
             let userSet = new Set(global.socketOnlineUserIds);
             userSet.add(id);
             dispatch?.({
@@ -428,6 +418,11 @@ const Workspace = ({
                 );
                 break;
               }
+              // 剪辑音轨
+              case 'changeCut': {
+                ee.emit('cut', data.start, data.end, data.index);
+                break;
+              }
             }
             message.success('Sync succeeded');
           }
@@ -528,9 +523,12 @@ const Workspace = ({
         </div>
         <div className={styles.trackContainer}>
           <div className={styles.trackWrap}>
-            {!isNoneState && (
-              <div ref={container} className={styles.trackList} />
-            )}
+            <div
+              ref={container}
+              className={`${styles.trackList} ${
+                !isNoneState ? styles.visible : ''
+              }`}
+            />
             {showLoading && (
               <div className={styles.loadMask}>
                 <Spin size="large" tip="Loading" />
