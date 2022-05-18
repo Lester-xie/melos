@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import styles from './index.less';
 import TrackItem from '@/components/trackItem';
 import { useDispatch, useSelector } from 'umi';
@@ -31,38 +31,6 @@ export default function TrackList(props: Props) {
     [currentTracks],
   );
 
-  const onMute = useCallback(
-    (mute: boolean, index: number) => {
-      const tracks = cloneDeep(currentTracks);
-      if (tracks.length > 0) {
-        tracks[index].mute = mute;
-        dispatch?.({
-          type: 'global/update',
-          payload: {
-            currentTracks: [...tracks],
-          },
-        });
-      }
-    },
-    [currentTracks],
-  );
-
-  const onSolo = useCallback(
-    (solo: boolean, index: number) => {
-      const tracks = cloneDeep(currentTracks);
-      if (tracks.length > 0) {
-        tracks[index].solo = solo;
-        dispatch?.({
-          type: 'global/update',
-          payload: {
-            currentTracks: [...tracks],
-          },
-        });
-      }
-    },
-    [currentTracks],
-  );
-
   return (
     <div className={styles.container}>
       <div className={styles.trackList}>
@@ -78,9 +46,8 @@ export default function TrackList(props: Props) {
             }}
             onDelete={() => props.onDeleteClicked(index)}
             onShift={onShift}
-            onMute={onMute}
-            onSolo={onSolo}
             index={index}
+            currentTracks={currentTracks}
           />
         ))}
       </div>

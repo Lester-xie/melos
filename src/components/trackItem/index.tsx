@@ -20,9 +20,8 @@ interface Props {
   };
   onDelete: () => void;
   onShift: (value: number, index: number) => void;
-  onMute: (mute: boolean, index: number) => void;
-  onSolo: (solo: boolean, index: number) => void;
   index: number;
+  currentTracks: any;
 }
 
 type ShiftType = 'auto' | 'manual';
@@ -33,8 +32,7 @@ export default function TrackItem({
   onDelete,
   index,
   onShift,
-  onMute,
-  onSolo,
+  currentTracks,
 }: Props) {
   const [muted, setMuted] = useState<boolean>(false);
   const [solo, setSolo] = useState<boolean>(false);
@@ -49,8 +47,6 @@ export default function TrackItem({
   const currentProject: { name: string; id: string } = useSelector(
     (state: any) => state.global.project,
   );
-
-  const currentTracks = useSelector((state: any) => state.global.currentTracks);
 
   const dispatch = useDispatch();
 
@@ -105,9 +101,9 @@ export default function TrackItem({
     const handleCutFinishd = (start: number, end: number, track: any) => {
       if (track._id === trackItem._id) {
         const cloneTrackList = cloneDeep(currentTracks);
-        if (cloneTrackList.length > 0) {
-          if (cloneTrackList[index].cut) {
-            cloneTrackList[index].cut.push({ start, end });
+        if (cloneTrackList.length > 0 && cloneTrackList[index]) {
+          if (cloneTrackList[index]?.cut) {
+            cloneTrackList[index]?.cut.push({ start, end });
           } else {
             cloneTrackList[index].cut = [{ start, end }];
           }
@@ -136,9 +132,6 @@ export default function TrackItem({
     ) => {
       if (track._id === trackItem._id) {
         const cloneTrackList = cloneDeep(currentTracks);
-        console.log('cloneTrackList: ', cloneTrackList);
-        console.log('index: ', index);
-        console.log('trackItem: ', trackItem);
         if (cloneTrackList.length > 0) {
           if (cloneTrackList[index].copy) {
             cloneTrackList[index].copy.push({ start, end, position });
@@ -167,17 +160,35 @@ export default function TrackItem({
   const onMuteToggle = useCallback(() => {
     trackItem.ee.emit('mute', trackItem, (isInMutedTrack: boolean) => {
       setMuted(isInMutedTrack);
-      onMute(isInMutedTrack, index);
+      const tracks = cloneDeep(currentTracks);
+      if (tracks.length > 0) {
+        tracks[index].mute = isInMutedTrack;
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...tracks],
+          },
+        });
+      }
+      debouncePushAction(currentProject.id, 'changeMute', { index });
     });
-    debouncePushAction(currentProject.id, 'changeMute', { index });
-  }, [trackItem, muted]);
+  }, [trackItem, muted, currentTracks]);
 
   const onSoloToggle = useCallback(() => {
     trackItem.ee.emit('solo', trackItem, (isInSoloedTrack: boolean) => {
       setSolo(isInSoloedTrack);
-      onSolo(isInSoloedTrack, index);
+      const tracks = cloneDeep(currentTracks);
+      if (tracks.length > 0) {
+        tracks[index].solo = isInSoloedTrack;
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...tracks],
+          },
+        });
+      }
+      debouncePushAction(currentProject.id, 'changeSolo', { index });
     });
-    debouncePushAction(currentProject.id, 'changeSolo', { index });
   }, [trackItem, solo, currentTracks]);
 
   useEffect(() => {
