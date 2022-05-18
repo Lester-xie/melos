@@ -288,14 +288,6 @@ const Workspace = ({
       // 广播一条消息，告诉别人我已经上线
       // noticeOnline(user.id).then()
     }
-
-    // const disconnectSocket = ()=>{
-    //   noticeOffline(user.id).then()
-    // }
-    //  window.addEventListener('beforeunload',disconnectSocket)
-    // return ()=>{
-    //   window.removeEventListener('beforeunload',disconnectSocket)
-    // }
   }, [token]);
 
   useEffect(() => {
@@ -366,6 +358,7 @@ const Workspace = ({
                 playContext.load([data]).then(() => {
                   setTrackList([...playContext.tracks]);
                   setIsNoneState(playContext.tracks.length === 0);
+                  dispatch?.({ type: 'global/addTrack', data });
                 });
                 break;
               }
@@ -374,6 +367,7 @@ const Workspace = ({
                 ee.emit('removeTrack', playContext.tracks[data.index]);
                 setTrackList([...playContext.tracks]);
                 setIsNoneState(playContext.tracks.length === 0);
+                dispatch?.({ type: 'global/removeTrack', index: data.index });
                 break;
               }
               // 音量改变

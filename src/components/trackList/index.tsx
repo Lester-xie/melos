@@ -1,9 +1,6 @@
-import React, { useCallback, useEffect } from 'react';
+import React from 'react';
 import styles from './index.less';
 import TrackItem from '@/components/trackItem';
-import { useDispatch, useSelector } from 'umi';
-import { cloneDeep } from 'lodash';
-import { debouncePushAction } from '@/services/api';
 
 interface Props {
   onAddBtnClicked: () => void;
@@ -12,25 +9,6 @@ interface Props {
 }
 
 export default function TrackList(props: Props) {
-  const currentTracks = useSelector((state: any) => state.global.currentTracks);
-  const dispatch = useDispatch();
-
-  const onShift = useCallback(
-    (value: number, index: number) => {
-      const tracks = cloneDeep(currentTracks);
-      if (tracks.length > 0) {
-        tracks[index].startTime = value;
-        dispatch?.({
-          type: 'global/update',
-          payload: {
-            currentTracks: [...tracks],
-          },
-        });
-      }
-    },
-    [currentTracks],
-  );
-
   return (
     <div className={styles.container}>
       <div className={styles.trackList}>
@@ -45,9 +23,7 @@ export default function TrackList(props: Props) {
               status: 'online',
             }}
             onDelete={() => props.onDeleteClicked(index)}
-            onShift={onShift}
             index={index}
-            currentTracks={currentTracks}
           />
         ))}
       </div>

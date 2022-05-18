@@ -7,7 +7,6 @@ import { ReactComponent as IconPlay } from '@/assets/icons/icon_play.svg';
 import { Popconfirm } from 'antd';
 import { debouncePushAction } from '@/services/api';
 import { useSelector, useDispatch } from 'umi';
-import { cloneDeep } from 'lodash';
 import useDebounce from '@/hooks/useDebounce';
 
 interface Props {
@@ -19,21 +18,12 @@ interface Props {
     status: string;
   };
   onDelete: () => void;
-  onShift: (value: number, index: number) => void;
   index: number;
-  currentTracks: any;
 }
 
 type ShiftType = 'auto' | 'manual';
 
-export default function TrackItem({
-  trackItem,
-  item,
-  onDelete,
-  index,
-  onShift,
-  currentTracks,
-}: Props) {
+export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
   const [muted, setMuted] = useState<boolean>(false);
   const [solo, setSolo] = useState<boolean>(false);
   const [gain, setGain] = useState<number>(100);
@@ -53,7 +43,12 @@ export default function TrackItem({
   useEffect(() => {
     if (debouncedStartTime !== null) {
       if (debouncedShiftType === 'manual') {
-        onShift(debouncedStartTime, index);
+        dispatch({
+          type: 'global/updateRow',
+          attr: 'startTime',
+          index,
+          startTime: debouncedStartTime,
+        });
         debouncePushAction(currentProject.id, 'changeShift', {
           value: debouncedStartTime,
           index,
@@ -100,25 +95,12 @@ export default function TrackItem({
 
     const handleCutFinishd = (start: number, end: number, track: any) => {
       if (track._id === trackItem._id) {
-        const cloneTrackList = cloneDeep(currentTracks);
-        if (cloneTrackList.length > 0 && cloneTrackList[index]) {
-          if (cloneTrackList[index]?.cut) {
-            cloneTrackList[index]?.cut.push({ start, end });
-          } else {
-            cloneTrackList[index].cut = [{ start, end }];
-          }
-          dispatch({
-            type: 'global/update',
-            payload: {
-              currentTracks: [...cloneTrackList],
-            },
-          });
-          debouncePushAction(currentProject.id, 'changeCut', {
-            index,
-            start,
-            end,
-          });
-        }
+        dispatch({ type: 'global/updateRow', attr: 'cut', index, start, end });
+        debouncePushAction(currentProject.id, 'changeCut', {
+          index,
+          start,
+          end,
+        });
       }
     };
 
@@ -131,65 +113,51 @@ export default function TrackItem({
       track: any,
     ) => {
       if (track._id === trackItem._id) {
-        const cloneTrackList = cloneDeep(currentTracks);
-        if (cloneTrackList.length > 0) {
-          if (cloneTrackList[index].copy) {
-            cloneTrackList[index].copy.push({ start, end, position });
-          } else {
-            cloneTrackList[index].copy = [{ start, end, position }];
-          }
-          dispatch({
-            type: 'global/update',
-            payload: {
-              currentTracks: [...cloneTrackList],
-            },
-          });
-          debouncePushAction(currentProject.id, 'changeCopy', {
-            index,
-            start,
-            position,
-            end,
-          });
-        }
+        dispatch({
+          type: 'global/updateRow',
+          attr: 'copy',
+          index,
+          start,
+          end,
+          position,
+        });
+        debouncePushAction(currentProject.id, 'changeCopy', {
+          index,
+          start,
+          position,
+          end,
+        });
       }
     };
 
     trackItem.ee.on('pastefinished', handlePasteFinished);
-  }, [trackItem, currentTracks]);
+  }, [trackItem]);
 
   const onMuteToggle = useCallback(() => {
     trackItem.ee.emit('mute', trackItem, (isInMutedTrack: boolean) => {
       setMuted(isInMutedTrack);
-      const tracks = cloneDeep(currentTracks);
-      if (tracks.length > 0) {
-        tracks[index].mute = isInMutedTrack;
-        dispatch?.({
-          type: 'global/update',
-          payload: {
-            currentTracks: [...tracks],
-          },
-        });
-      }
+      dispatch({
+        type: 'global/updateRow',
+        attr: 'mute',
+        index,
+        mute: isInMutedTrack,
+      });
       debouncePushAction(currentProject.id, 'changeMute', { index });
     });
-  }, [trackItem, muted, currentTracks]);
+  }, [trackItem, muted]);
 
   const onSoloToggle = useCallback(() => {
     trackItem.ee.emit('solo', trackItem, (isInSoloedTrack: boolean) => {
       setSolo(isInSoloedTrack);
-      const tracks = cloneDeep(currentTracks);
-      if (tracks.length > 0) {
-        tracks[index].solo = isInSoloedTrack;
-        dispatch?.({
-          type: 'global/update',
-          payload: {
-            currentTracks: [...tracks],
-          },
-        });
-      }
+      dispatch({
+        type: 'global/updateRow',
+        attr: 'solo',
+        index,
+        solo: isInSoloedTrack,
+      });
       debouncePushAction(currentProject.id, 'changeSolo', { index });
     });
-  }, [trackItem, solo, currentTracks]);
+  }, [trackItem, solo]);
 
   useEffect(() => {
     setGain(trackItem?.gain * 100);
@@ -203,37 +171,33 @@ export default function TrackItem({
     (value: number) => {
       setGain(value);
       trackItem.ee.emit('volumechange', value, trackItem);
-      const cloneTrackList = cloneDeep(currentTracks);
-      cloneTrackList[index].gain = value / 100;
       dispatch({
-        type: 'global/update',
-        payload: {
-          currentTracks: [...cloneTrackList],
-        },
+        type: 'global/updateRow',
+        attr: 'gain',
+        index,
+        gain: value / 100,
       });
       debouncePushAction(currentProject.id, 'changeVolume', { value, index });
     },
-    [trackItem, currentTracks],
+    [trackItem],
   );
 
   const onStereoChange = useCallback(
     (value: number) => {
       setStereopan(value);
       trackItem.ee.emit('stereopan', value / 100, trackItem);
-      const cloneTrackList = cloneDeep(currentTracks);
-      cloneTrackList[index].stereoPan = value / 100;
       dispatch({
-        type: 'global/update',
-        payload: {
-          currentTracks: [...cloneTrackList],
-        },
+        type: 'global/updateRow',
+        attr: 'stereoPan',
+        index,
+        stereoPan: value / 100,
       });
       debouncePushAction(currentProject.id, 'changeStereopan', {
         value,
         index,
       });
     },
-    [trackItem, currentTracks],
+    [trackItem],
   );
 
   const onPlay = useCallback(() => {
