@@ -235,12 +235,7 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
             >
               S
             </button>
-            <button type="button" disabled>
-              R
-            </button>
-            <button type="button" onClick={onPlay}>
-              <IconPlay className={styles.playIcon} />
-            </button>
+            <button type="button">W</button>
             <button type="button" disabled>
               <div className={styles.circleIcon} />
             </button>

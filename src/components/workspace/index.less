@@ -25,9 +25,8 @@
       }
 
       .btnAdd {
-        width: 24px;
-        height: 24px;
-        min-width: 24px;
+        width: 100%;
+        height: 40px;
         background: #3183ff;
         border-radius: 8px 8px 8px 8px;
         margin-left: 16px;
@@ -35,6 +34,15 @@
         line-height: 24px;
         color: #ffffff;
         padding: initial;
+
+        span {
+          font-size: 18px;
+        }
+      }
+
+      .disabled {
+        opacity: 0.4;
+        cursor: default;
       }
 
       .active {
@@ -131,6 +139,13 @@
         .cursorIcon {
           width: 24px;
           height: 24px;
+          position: relative;
+          bottom: 2px;
+        }
+
+        .muteIcon {
+          width: 20px;
+          height: 20px;
           position: relative;
           bottom: 2px;
         }

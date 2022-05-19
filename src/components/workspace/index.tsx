@@ -17,8 +17,6 @@ import { debouncePushAction, getMemberList } from '@/services/api';
 import { GlobalModelState } from '@/models/global';
 import { ConnectProps } from '@@/plugin-dva/connect';
 
-type Tab = 'M' | 'S' | 'R' | 'W' | 'A' | '';
-
 interface Props extends ConnectProps {
   token: string | null;
   downloadStatus: boolean;
@@ -48,7 +46,6 @@ const Workspace = ({
   const [playContext, setPlayContext] = useState<any>(null);
   const [isNoneState, setIsNoneState] = useState(false);
   const [socket, setSocket] = useState<any>(null);
-  const [tab, setTab] = useState<Tab>('');
   const [showLoading, setShowLoading] = useState(false);
   const {
     project: currentProject,
@@ -195,6 +192,38 @@ const Workspace = ({
     ee.emit('pause');
   };
 
+  const onMuteBtnClicked = useCallback(
+    (type: 'auto' | 'manual') => {
+      const cloneCurrentTracks = cloneDeep(currentTracks);
+      const clonePlayContextTracks = cloneDeep(playContext.tracks);
+      const allTracksIsMute = currentTracks.every((item) => item.mute);
+      if (allTracksIsMute) {
+        currentTracks.forEach((item, index) => {
+          cloneCurrentTracks[index].mute = false;
+          ee.emit('mute', playContext.tracks[index]);
+        });
+      } else {
+        currentTracks.forEach((item, index) => {
+          if (!item.mute) {
+            cloneCurrentTracks[index].mute = true;
+            ee.emit('mute', playContext.tracks[index]);
+          }
+        });
+      }
+      dispatch?.({
+        type: 'global/update',
+        payload: {
+          currentTracks: [...cloneCurrentTracks],
+        },
+      });
+      setTrackList([...clonePlayContextTracks]);
+      if (type === 'manual') {
+        debouncePushAction(currentProject.id, 'muteAllTracks');
+      }
+    },
+    [currentTracks, playContext],
+  );
+
   const onStopBtnClicked = () => {
     ee.emit('stop');
   };
@@ -227,11 +256,9 @@ const Workspace = ({
   }, [downloadStatus]);
 
   const onAddBtnClicked = () => {
-    if (!currentProject?.id) {
-      message.warn('Please select one project first');
-      return;
+    if (currentProject?.id) {
+      setShowResource(true);
     }
-    setShowResource(true);
   };
 
   const onDeleteClicked = (index: number) => {
@@ -290,7 +317,6 @@ const Workspace = ({
   };
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (token) {
       socket?.disconnect();
       dispatch?.({
@@ -450,6 +476,11 @@ const Workspace = ({
                 );
                 break;
               }
+              // 静音所有音轨
+              case 'muteAllTracks': {
+                onMuteBtnClicked('auto');
+                break;
+              }
             }
             message.success('Sync succeeded');
           }
@@ -463,43 +494,18 @@ const Workspace = ({
         });
       });
     }
-  }, [socket, playContext, trackList, currentProject]);
+  }, [socket, playContext, trackList, currentProject, currentTracks]);
 
   return (
     <div className={styles.container}>
       <div className={styles.operationWrap}>
         <div className={styles.left}>
           <button
-            onClick={() => setTab('M')}
-            className={tab === 'M' ? styles.active : ''}
+            className={`${styles.btnAdd} ${
+              !currentProject?.id ? styles.disabled : ''
+            }`}
+            onClick={onAddBtnClicked}
           >
-            M
-          </button>
-          <button
-            onClick={() => setTab('S')}
-            className={tab === 'S' ? styles.active : ''}
-          >
-            S
-          </button>
-          <button
-            onClick={() => setTab('R')}
-            className={tab === 'R' ? styles.active : ''}
-          >
-            R
-          </button>
-          <button
-            onClick={() => setTab('W')}
-            className={tab === 'W' ? styles.active : ''}
-          >
-            W
-          </button>
-          <button
-            onClick={() => setTab('A')}
-            className={tab === 'A' ? styles.active : ''}
-          >
-            A
-          </button>
-          <button className={styles.btnAdd} onClick={onAddBtnClicked}>
             <PlusOutlined />
           </button>
         </div>
@@ -508,6 +514,13 @@ const Workspace = ({
             <button onClick={onStopBtnClicked} className={styles.stopBtn} />
             <button onClick={onPlayBtnClicked} className={styles.playBtn} />
             <button onClick={onPauseBtnClicked} className={styles.pauseBtn} />
+            <button onClick={() => onMuteBtnClicked('manual')}>
+              <img
+                src={require('@/assets/workshop/mute.png')}
+                alt="mute"
+                className={styles.muteIcon}
+              />
+            </button>
           </div>
           <div className={styles.trackTransport}>
             <button
@@ -542,11 +555,7 @@ const Workspace = ({
             onClose={() => setShowResource(false)}
             onSelect={onFileSelect}
           />
-          <TrackList
-            tracks={trackList}
-            onAddBtnClicked={onAddBtnClicked}
-            onDeleteClicked={onDeleteClicked}
-          />
+          <TrackList tracks={trackList} onDeleteClicked={onDeleteClicked} />
         </div>
         <div className={styles.trackContainer}>
           <div className={styles.trackWrap}>

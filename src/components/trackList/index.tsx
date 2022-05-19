@@ -3,7 +3,6 @@ import styles from './index.less';
 import TrackItem from '@/components/trackItem';
 
 interface Props {
-  onAddBtnClicked: () => void;
   onDeleteClicked: (index: number) => void;
   tracks: any[];
 }
