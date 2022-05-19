@@ -18,6 +18,7 @@ export interface TrackInfo {
   copy: Array<any>;
   cut: Array<any>;
   startTime: number;
+  targetTrackIndex: number;
 }
 
 export interface GlobalModelState {
@@ -116,10 +117,17 @@ const GlobalModel: GlobalModelType = {
             trackList[action.index].copy.push({
               start: action.start,
               end: action.end,
+              position: action.position,
+              targetTrackIndex: action.targetTrackIndex,
             });
           } else {
             trackList[action.index].copy = [
-              { start: action.start, end: action.end },
+              {
+                start: action.start,
+                end: action.end,
+                targetTrackIndex: action.targetTrackIndex,
+                position: action.position,
+              },
             ];
           }
           break;

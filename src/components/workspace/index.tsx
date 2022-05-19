@@ -109,8 +109,20 @@ const Workspace = ({
           }
           if (item.copy && item.copy.length > 0) {
             item.copy.forEach(
-              (i: { start: number; end: number; position: number }) => {
-                ee.emit('autoPaste', i.start, i.end, i.position, index);
+              (i: {
+                start: number;
+                end: number;
+                position: number;
+                targetTrackIndex: number;
+              }) => {
+                ee.emit(
+                  'autoPaste',
+                  i.start,
+                  i.end,
+                  i.position,
+                  index,
+                  i.targetTrackIndex,
+                );
               },
             );
           }
@@ -434,6 +446,7 @@ const Workspace = ({
                   data.end,
                   data.position,
                   data.index,
+                  data.targetTrackIndex,
                 );
                 break;
               }

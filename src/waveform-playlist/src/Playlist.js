@@ -618,12 +618,21 @@ export default class {
 
       this.copy = null;
 
+      let targetTrackIndex = null;
+
+      this.tracks.forEach((item, index) => {
+        if (item._id === activeTrack._id) {
+          targetTrackIndex = index;
+        }
+      });
+
       this.ee.emit(
         'pastefinished',
         start,
         end,
         timeSelection.start,
         copyedTrack,
+        targetTrackIndex,
       );
 
       activeTrack.setBuffer(newBuffer);
@@ -638,14 +647,14 @@ export default class {
       this.draw(this.render());
     });
 
-    ee.on('autoPaste', (s, e, position, index) => {
-      const activeTrack = this.tracks[index];
+    ee.on('autoPaste', (s, e, position, copiedIndex, targetTrackIndex) => {
+      const activeTrack = this.tracks[targetTrackIndex];
       if (!activeTrack) {
         return;
       }
       const start = s;
       const end = e;
-      const copyedTrack = activeTrack;
+      const copyedTrack = this.tracks[copiedIndex];
       const sampleRate = activeTrack.buffer.sampleRate; // TODO 不同音频复制，可能需要转换采样率
       const startIdx = secondsToSamples(start, sampleRate);
       const endIdx = secondsToSamples(end, sampleRate);

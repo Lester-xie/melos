@@ -111,6 +111,7 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
       end: number,
       position: number,
       track: any,
+      targetTrackIndex: number,
     ) => {
       if (track._id === trackItem._id) {
         dispatch({
@@ -120,12 +121,14 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
           start,
           end,
           position,
+          targetTrackIndex,
         });
         debouncePushAction(currentProject.id, 'changeCopy', {
           index,
           start,
-          position,
           end,
+          position,
+          targetTrackIndex,
         });
       }
     };
