@@ -593,7 +593,7 @@ const Workspace = ({
             <button>
               <UndoOutlined />
             </button>
-            <button onClick={onClearBtnClicked}>
+            <button onClick={onClearBtnClicked} className={styles.clearBtn}>
               <img
                 src={require('@/assets/workshop/clear.png')}
                 alt="clear"
