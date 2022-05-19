@@ -5,7 +5,7 @@ import EventEmitter from 'events';
 import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
-import { message, Spin } from 'antd';
+import { message, Spin, Modal } from 'antd';
 import { cloneDeep } from 'lodash';
 import styles from './index.less';
 import { PlusOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
@@ -16,6 +16,7 @@ import { connect } from 'umi';
 import { debouncePushAction, getMemberList } from '@/services/api';
 import { GlobalModelState } from '@/models/global';
 import { ConnectProps } from '@@/plugin-dva/connect';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface Props extends ConnectProps {
   token: string | null;
@@ -47,6 +48,7 @@ const Workspace = ({
   const [isNoneState, setIsNoneState] = useState(false);
   const [socket, setSocket] = useState<any>(null);
   const [showLoading, setShowLoading] = useState(false);
+  const [clearModalVisible, setClearModalVisible] = useState(false);
   const {
     project: currentProject,
     userRoleInCurrentProject,
@@ -316,6 +318,41 @@ const Workspace = ({
     });
   };
 
+  const onConfirmClearAllTracks = useCallback(
+    (type: 'auto' | 'manual') => {
+      const clonePlayContextTracks = cloneDeep(playContext.tracks);
+      const newTracks = currentTracks.map((item: any) => {
+        return {
+          src: item.src,
+          name: item.name,
+          mute: false,
+          solo: false,
+          gain: 1,
+          stereoPan: 0,
+          copy: null,
+          cut: null,
+          startTime: 0,
+          assetId: item.assetId,
+        };
+      });
+      setClearModalVisible(false);
+      ee.emit('clear');
+      playContext.load(newTracks).then(() => {
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...newTracks],
+          },
+        });
+        setTrackList([...clonePlayContextTracks]);
+        if (type === 'manual') {
+          debouncePushAction(currentProject.id, 'restoreAllTracks');
+        }
+      });
+    },
+    [currentTracks, playContext],
+  );
+
   useEffect(() => {
     if (token) {
       socket?.disconnect();
@@ -481,6 +518,11 @@ const Workspace = ({
                 onMuteBtnClicked('auto');
                 break;
               }
+              // 重置所有音轨
+              case 'restoreAllTracks': {
+                onConfirmClearAllTracks('auto');
+                break;
+              }
             }
             message.success('Sync succeeded');
           }
@@ -495,6 +537,12 @@ const Workspace = ({
       });
     }
   }, [socket, playContext, trackList, currentProject, currentTracks]);
+
+  const onClearBtnClicked = useCallback(() => {
+    if (currentTracks.length > 0) {
+      setClearModalVisible(true);
+    }
+  }, [currentTracks]);
 
   return (
     <div className={styles.container}>
@@ -518,7 +566,7 @@ const Workspace = ({
               <img
                 src={require('@/assets/workshop/mute.png')}
                 alt="mute"
-                className={styles.muteIcon}
+                className={styles.btnIcon}
               />
             </button>
           </div>
@@ -530,7 +578,7 @@ const Workspace = ({
               <img
                 src={require('@/assets/workshop/cursor.png')}
                 alt="cursor"
-                className={styles.cursorIcon}
+                className={styles.btnIcon}
               />
             </button>
             <button
@@ -544,6 +592,13 @@ const Workspace = ({
             <button className={styles.cutBtn} onClick={onTrimBtnClicked} />
             <button>
               <UndoOutlined />
+            </button>
+            <button onClick={onClearBtnClicked}>
+              <img
+                src={require('@/assets/workshop/clear.png')}
+                alt="clear"
+                className={styles.btnIcon}
+              />
             </button>
           </div>
         </div>
@@ -574,6 +629,12 @@ const Workspace = ({
         </div>
       </div>
       {userRoleInCurrentProject === 'guest' && <div className={styles.mask} />}
+      <ConfirmModal
+        text="Are you sure you want to clear all operations?"
+        visible={clearModalVisible}
+        onOk={() => onConfirmClearAllTracks('manual')}
+        onCancel={() => setClearModalVisible(false)}
+      />
     </div>
   );
 };

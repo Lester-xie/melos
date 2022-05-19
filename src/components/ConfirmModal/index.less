@@ -1,0 +1,36 @@
+.modal {
+  .text {
+    padding: 30px;
+    font-size: 16px;
+    margin: 0;
+  }
+  :global {
+    .ant-modal-close-x {
+      color: white;
+    }
+  }
+
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 20px;
+    padding-top: 0;
+    button {
+      width: 120px;
+      height: 40px;
+      text-align: center;
+      display: inline-block;
+      border: 1px solid #323334;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.15s linear;
+      margin-left: 20px;
+    }
+    .cancel {
+      background-color: transparent;
+      &:hover {
+        background: #545456;
+      }
+    }
+  }
+}
