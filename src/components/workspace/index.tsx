@@ -56,7 +56,7 @@ const Workspace = ({
     currentTracks,
   } = global;
 
-  const onFileSelect = (file: any, type: 'cloud' | 'local') => {
+  const onFileSelect = (file: any) => {
     setIsNoneState(false);
     playContext.load([file]).then(() => {
       setTrackList([...playContext.tracks]);
@@ -75,6 +75,7 @@ const Workspace = ({
               copy: null,
               cut: null,
               startTime: 0,
+              assetId: file.assetId,
             },
           ],
         },

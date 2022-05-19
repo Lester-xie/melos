@@ -134,6 +134,10 @@ const Meeting: React.FC<IMeeting> = (props) => {
   };
 
   const inviteMember = () => {
+    if(!selectValue){
+      message.warn('Please select a member first').then()
+      return;
+    }
     props.inviteUser(selectValue);
   };
 

@@ -21,7 +21,7 @@ type Tab = 'cloud' | 'local';
 interface Props {
   show: boolean;
   onClose: () => void;
-  onSelect: (file: any, type: 'cloud' | 'local') => void;
+  onSelect: (file: any) => void;
 }
 
 const useTags = () => {
@@ -161,23 +161,18 @@ export default function Resource(props: Props) {
   };
 
   const onItemClicked = (item: any) => {
-    props.onSelect(
-      {
-        src: item.src,
-        name: item.name,
-      },
-      'cloud',
-    );
+    props.onSelect({
+      src: item.src,
+      name: item.name,
+    });
   };
 
   const onHistoryItemClicked = (item: any) => {
-    props.onSelect(
-      {
-        src: item.url,
-        name: item.name || 'test.mp3',
-      },
-      'cloud',
-    );
+    props.onSelect({
+      src: item.url,
+      name: item.name || 'test.mp3',
+      assetId: item._id,
+    });
   };
 
   const renderCloud = () => {
@@ -263,13 +258,11 @@ export default function Resource(props: Props) {
     const res = await createAsset(token, userInfo.id, fileName);
     if (res.code === 0) {
       const data = res.data.result;
-      props.onSelect(
-        {
-          src: data.url,
-          name: fileName,
-        },
-        'local',
-      );
+      props.onSelect({
+        src: data.url,
+        name: fileName,
+        assetId: data._id,
+      });
     }
     setLoading(false);
     fetchUploadList(userInfo.id).then((res) => {
