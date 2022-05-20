@@ -171,7 +171,7 @@ const Workspace = ({
           setShowLoading(false);
         });
 
-        ee.on('audiosourcesstartload', (trackList) => {
+        ee.on('audiosourcesstartload', () => {
           setShowLoading(true);
         });
 
@@ -186,6 +186,22 @@ const Workspace = ({
     [ee, toneCtx],
   );
 
+  useEffect(() => {
+    if (ee && playContext && currentProject.id) {
+      ee.on('reloadfinished', (trackIndex) => {
+        dispatch?.({
+          type: 'global/updateRow',
+          attr: 'reloadTrack',
+          index: trackIndex,
+        });
+        setTrackList([...playContext.tracks]);
+        debouncePushAction(currentProject.id, 'reloadTrack', {
+          index: trackIndex,
+        });
+      });
+    }
+  }, [ee, playContext, currentProject]);
+
   const onPlayBtnClicked = () => {
     ee.emit('play');
   };
@@ -196,31 +212,33 @@ const Workspace = ({
 
   const onMuteBtnClicked = useCallback(
     (type: 'auto' | 'manual') => {
-      const cloneCurrentTracks = cloneDeep(currentTracks);
-      const clonePlayContextTracks = cloneDeep(playContext.tracks);
-      const allTracksIsMute = currentTracks.every((item) => item.mute);
-      if (allTracksIsMute) {
-        currentTracks.forEach((item, index) => {
-          cloneCurrentTracks[index].mute = false;
-          ee.emit('mute', playContext.tracks[index]);
-        });
-      } else {
-        currentTracks.forEach((item, index) => {
-          if (!item.mute) {
-            cloneCurrentTracks[index].mute = true;
+      if (currentTracks.length > 0) {
+        const cloneCurrentTracks = cloneDeep(currentTracks);
+        const clonePlayContextTracks = cloneDeep(playContext.tracks);
+        const allTracksIsMute = currentTracks.every((item) => item.mute);
+        if (allTracksIsMute) {
+          currentTracks.forEach((item, index) => {
+            cloneCurrentTracks[index].mute = false;
             ee.emit('mute', playContext.tracks[index]);
-          }
+          });
+        } else {
+          currentTracks.forEach((item, index) => {
+            if (!item.mute) {
+              cloneCurrentTracks[index].mute = true;
+              ee.emit('mute', playContext.tracks[index]);
+            }
+          });
+        }
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [...cloneCurrentTracks],
+          },
         });
-      }
-      dispatch?.({
-        type: 'global/update',
-        payload: {
-          currentTracks: [...cloneCurrentTracks],
-        },
-      });
-      setTrackList([...clonePlayContextTracks]);
-      if (type === 'manual') {
-        debouncePushAction(currentProject.id, 'muteAllTracks');
+        setTrackList([...clonePlayContextTracks]);
+        if (type === 'manual') {
+          debouncePushAction(currentProject.id, 'muteAllTracks');
+        }
       }
     },
     [currentTracks, playContext],
@@ -320,7 +338,6 @@ const Workspace = ({
 
   const onConfirmClearAllTracks = useCallback(
     (type: 'auto' | 'manual') => {
-      const clonePlayContextTracks = cloneDeep(playContext.tracks);
       const newTracks = currentTracks.map((item: any) => {
         return {
           src: item.src,
@@ -344,7 +361,7 @@ const Workspace = ({
             currentTracks: [...newTracks],
           },
         });
-        setTrackList([...clonePlayContextTracks]);
+        setTrackList([...playContext.tracks]);
         if (type === 'manual') {
           debouncePushAction(currentProject.id, 'restoreAllTracks');
         }
@@ -492,7 +509,6 @@ const Workspace = ({
                   'shift',
                   data.value - trackList[data.index].startTime,
                   playContext.tracks[data.index],
-                  'auto',
                 );
                 break;
               }
@@ -521,6 +537,25 @@ const Workspace = ({
               // 重置所有音轨
               case 'restoreAllTracks': {
                 onConfirmClearAllTracks('auto');
+                break;
+              }
+              // 重置单条音轨
+              case 'reloadTrack': {
+                dispatch?.({
+                  type: 'global/updateRow',
+                  attr: 'reloadTrack',
+                  index: data.index,
+                });
+                ee.emit(
+                  'reload',
+                  playContext.tracks[data.index],
+                  data.index,
+                  'auto',
+                  () => {
+                    setTrackList([...playContext.tracks]);
+                    console.log('emittt');
+                  },
+                );
                 break;
               }
             }

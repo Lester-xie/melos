@@ -152,6 +152,22 @@ const GlobalModel: GlobalModelType = {
           trackList[action.index].startTime = action.startTime;
           break;
         }
+        case 'reloadTrack': {
+          const data = trackList[action.index];
+          trackList[action.index] = {
+            src: data.src,
+            name: data.name,
+            mute: false,
+            solo: false,
+            gain: 1,
+            stereoPan: 0,
+            copy: null,
+            cut: null,
+            startTime: 0,
+            assetId: data.assetId,
+          };
+          break;
+        }
       }
       // @ts-ignore
       updateProject(state.project.id, state.project.name, trackList);

@@ -3,7 +3,6 @@ import { Slider } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import classNames from 'classnames';
 import styles from './index.less';
-import { ReactComponent as IconPlay } from '@/assets/icons/icon_play.svg';
 import { Popconfirm } from 'antd';
 import { debouncePushAction } from '@/services/api';
 import { useSelector, useDispatch } from 'umi';
@@ -203,9 +202,9 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
     [trackItem],
   );
 
-  const onPlay = useCallback(() => {
-    trackItem.ee.emit('play');
-  }, [trackItem]);
+  const onReloadClicked = () => {
+    trackItem.ee.emit('reload', trackItem, index, 'manual');
+  };
 
   return (
     <div className={styles.container}>
@@ -236,13 +235,21 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
               S
             </button>
             <button type="button">W</button>
-            <button type="button" disabled>
-              <div className={styles.circleIcon} />
-            </button>
+            <Popconfirm
+              placement="top"
+              title="Confirm reset this track？"
+              onConfirm={onReloadClicked}
+              okText="Yes"
+              cancelText="No"
+            >
+              <button type="button">
+                <div className={styles.circleIcon} />
+              </button>
+            </Popconfirm>
           </div>
         </div>
         <Popconfirm
-          placement="topLeft"
+          placement="top"
           title="Confirm Delete？"
           onConfirm={onDelete}
           okText="Yes"
