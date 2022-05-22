@@ -41,18 +41,16 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
 
   useEffect(() => {
     if (debouncedStartTime !== null) {
-      if (debouncedShiftType === 'manual') {
-        dispatch({
-          type: 'global/updateRow',
-          attr: 'startTime',
-          index,
-          startTime: debouncedStartTime,
-        });
-        debouncePushAction(currentProject.id, 'changeShift', {
-          value: debouncedStartTime,
-          index,
-        });
-      }
+      dispatch({
+        type: 'global/updateRow',
+        attr: 'startTime',
+        index,
+        startTime: debouncedStartTime,
+      });
+      debouncePushAction(currentProject.id, 'changeShift', {
+        value: debouncedStartTime,
+        index,
+      });
     }
   }, [debouncedStartTime, debouncedShiftType]);
 
@@ -90,7 +88,7 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
       }
     };
 
-    trackItem.ee.on('shift', handleShift);
+    trackItem.ee.on('onshift', handleShift);
 
     const handleCutFinishd = (start: number, end: number, track: any) => {
       if (track._id === trackItem._id) {

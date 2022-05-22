@@ -53,6 +53,7 @@ const Workspace = ({
     project: currentProject,
     userRoleInCurrentProject,
     currentTracks,
+    revocationList,
   } = global;
 
   const onFileSelect = (file: any) => {
@@ -87,49 +88,57 @@ const Workspace = ({
     setToneCtx(Tone.getContext());
   }, []);
 
-  useEffect(() => {
-    if (trackList.length === 0 && currentTracks.length > 0) {
-      playContext.load(currentTracks).then(() => {
-        currentTracks.forEach((item: any, index: number) => {
-          if (item.mute) {
-            ee.emit('mute', playContext.tracks[index]);
-          }
-          if (item.solo) {
-            ee.emit('solo', playContext.tracks[index]);
-          }
-          if (item.startTime > 0) {
-            ee.emit('shift', item.startTime, playContext.tracks[index], 'auto');
-            ee.emit('statechange', 'select');
-          }
-          if (item.cut && item.cut.length > 0) {
-            item.cut.forEach((i: { start: number; end: number }) => {
-              ee.emit('cut', i.start, i.end, index);
-            });
-          }
-          if (item.copy && item.copy.length > 0) {
-            item.copy.forEach(
-              (i: {
-                start: number;
-                end: number;
-                position: number;
-                targetTrackIndex: number;
-              }) => {
-                ee.emit(
-                  'autoPaste',
-                  i.start,
-                  i.end,
-                  i.position,
-                  index,
-                  i.targetTrackIndex,
-                );
-              },
-            );
-          }
-        });
-        setTrackList([...playContext.tracks]);
+  const handleInit = (item: any, index: number) => {
+    if (item.mute) {
+      ee.emit('mute', playContext.tracks[index]);
+    }
+    if (item.solo) {
+      ee.emit('solo', playContext.tracks[index]);
+    }
+    if (item.startTime > 0) {
+      ee.emit('shift', item.startTime, playContext.tracks[index]);
+      ee.emit('statechange', 'select');
+    }
+    if (item.cut && item.cut.length > 0) {
+      item.cut.forEach((i: { start: number; end: number }) => {
+        ee.emit('cut', i.start, i.end, index);
       });
     }
-  }, [currentTracks]);
+    if (item.copy && item.copy.length > 0) {
+      item.copy.forEach(
+        (i: {
+          start: number;
+          end: number;
+          position: number;
+          targetTrackIndex: number;
+        }) => {
+          ee.emit(
+            'autoPaste',
+            i.start,
+            i.end,
+            i.position,
+            index,
+            i.targetTrackIndex,
+          );
+        },
+      );
+    }
+  };
+
+  const reloadPlayer = useCallback(() => {
+    playContext.load(currentTracks).then(() => {
+      currentTracks.forEach((item: any, index: number) => {
+        handleInit(item, index);
+      });
+      setTrackList([...playContext.tracks]);
+    });
+  }, [currentTracks, playContext]);
+
+  useEffect(() => {
+    if (trackList.length === 0 && currentTracks.length > 0) {
+      reloadPlayer();
+    }
+  }, [currentTracks, trackList]);
 
   const container = useCallback(
     (node) => {
@@ -259,8 +268,75 @@ const Workspace = ({
   };
 
   const onTrimBtnClicked = () => {
-    ee.emit('trim', 'manual');
+    ee.emit('trim');
   };
+
+  const onRevokeClicked = useCallback(() => {
+    if (revocationList.length > 0) {
+      const cloneRevocationList = cloneDeep(revocationList);
+      const cloneCurrentTracks = cloneDeep(currentTracks);
+      const prevAction = cloneRevocationList.pop();
+      const optionName = prevAction.name;
+      switch (optionName) {
+        case 'shift': {
+          ee.emit(
+            'shift',
+            -(prevAction.currentStartTime - prevAction.prevStartTime),
+            playContext.tracks[prevAction.targetIndex],
+          );
+          cloneCurrentTracks[prevAction.targetIndex].startTime =
+            prevAction.prevStartTime;
+          dispatch?.({
+            type: 'global/update',
+            payload: {
+              currentTracks: [...cloneCurrentTracks],
+              revocationList: [...cloneRevocationList],
+            },
+          });
+          debouncePushAction(currentProject.id, 'changeShift', {
+            value: prevAction.prevStartTime,
+            index: prevAction.targetIndex,
+          });
+          break;
+        }
+        case 'cut':
+        case 'copy': {
+          const cloneData = cloneDeep(
+            cloneCurrentTracks[prevAction.targetIndex][optionName],
+          );
+          cloneData.pop();
+          cloneCurrentTracks[prevAction.targetIndex][optionName] = [
+            ...cloneData,
+          ];
+          dispatch?.({
+            type: 'global/update',
+            payload: {
+              currentTracks: [...cloneCurrentTracks],
+              revocationList: [...cloneRevocationList],
+            },
+          });
+          ee.emit(
+            'reload',
+            trackList[prevAction.targetIndex],
+            prevAction.targetIndex,
+            'auto',
+            () => {
+              cloneCurrentTracks.forEach((item: any, index: number) => {
+                if (index === prevAction.targetIndex) {
+                  handleInit(item, index);
+                }
+              });
+              setTrackList([...playContext.tracks]);
+            },
+          );
+          debouncePushAction(currentProject.id, 'revoke', {
+            value: optionName,
+            index: prevAction.targetIndex,
+          });
+        }
+      }
+    }
+  }, [revocationList, playContext, currentTracks]);
 
   const onDownloadBtnClicked = () => {
     if (playContext && playContext.tracks.length > 0) {
@@ -336,7 +412,7 @@ const Workspace = ({
     });
   };
 
-  const onConfirmClearAllTracks = useCallback(
+  const onConfirmResetAllTracks = useCallback(
     (type: 'auto' | 'manual') => {
       const newTracks = currentTracks.map((item: any) => {
         return {
@@ -346,8 +422,8 @@ const Workspace = ({
           solo: false,
           gain: 1,
           stereoPan: 0,
-          copy: null,
-          cut: null,
+          copy: [],
+          cut: [],
           startTime: 0,
           assetId: item.assetId,
         };
@@ -359,6 +435,7 @@ const Workspace = ({
           type: 'global/update',
           payload: {
             currentTracks: [...newTracks],
+            revocationList: [],
           },
         });
         setTrackList([...playContext.tracks]);
@@ -515,6 +592,13 @@ const Workspace = ({
               // 剪辑音轨
               case 'changeCut': {
                 ee.emit('cut', data.start, data.end, data.index);
+                dispatch?.({
+                  type: 'global/updateRow',
+                  attr: 'cut',
+                  index: data.index,
+                  start: data.start,
+                  end: data.end,
+                });
                 break;
               }
               // 复制音轨
@@ -527,6 +611,15 @@ const Workspace = ({
                   data.index,
                   data.targetTrackIndex,
                 );
+                dispatch?.({
+                  type: 'global/updateRow',
+                  attr: 'copy',
+                  index: data.index,
+                  start: data.start,
+                  end: data.end,
+                  position: data.position,
+                  targetTrackIndex: data.targetTrackIndex,
+                });
                 break;
               }
               // 静音所有音轨
@@ -536,7 +629,7 @@ const Workspace = ({
               }
               // 重置所有音轨
               case 'restoreAllTracks': {
-                onConfirmClearAllTracks('auto');
+                onConfirmResetAllTracks('auto');
                 break;
               }
               // 重置单条音轨
@@ -553,7 +646,37 @@ const Workspace = ({
                   'auto',
                   () => {
                     setTrackList([...playContext.tracks]);
-                    console.log('emittt');
+                  },
+                );
+                break;
+              }
+              // 撤销
+              case 'revoke': {
+                const cloneCurrentTracks = cloneDeep(currentTracks);
+                console.log(currentTracks);
+                const cloneData = cloneDeep(
+                  cloneCurrentTracks[data.index][data.value],
+                );
+                cloneData.pop();
+                cloneCurrentTracks[data.index][data.value] = [...cloneData];
+                dispatch?.({
+                  type: 'global/update',
+                  payload: {
+                    currentTracks: [...cloneCurrentTracks],
+                  },
+                });
+                ee.emit(
+                  'reload',
+                  trackList[data.index],
+                  data.index,
+                  'auto',
+                  () => {
+                    cloneCurrentTracks.forEach((item: any, index: number) => {
+                      if (index === data.index) {
+                        handleInit(item, index);
+                      }
+                    });
+                    setTrackList([...playContext.tracks]);
                   },
                 );
                 break;
@@ -625,7 +748,10 @@ const Workspace = ({
             <button className={styles.copyBtn} onClick={onCopyBtnClicked} />
             <button className={styles.pasteBtn} onClick={onPasteBtnClicked} />
             <button className={styles.cutBtn} onClick={onTrimBtnClicked} />
-            <button>
+            <button
+              onClick={onRevokeClicked}
+              className={revocationList.length === 0 ? styles.disabled : ''}
+            >
               <UndoOutlined />
             </button>
             <button onClick={onClearBtnClicked} className={styles.clearBtn}>
@@ -667,7 +793,7 @@ const Workspace = ({
       <ConfirmModal
         text="Are you sure you want to clear all operations?"
         visible={clearModalVisible}
-        onOk={() => onConfirmClearAllTracks('manual')}
+        onOk={() => onConfirmResetAllTracks('manual')}
         onCancel={() => setClearModalVisible(false)}
       />
     </div>

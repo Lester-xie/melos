@@ -17,10 +17,12 @@ import { secondsToSamples } from './utils/conversions';
 
 import RecorderWorkerFunction from './utils/recorderWorker';
 import ExportWavWorkerFunction from './utils/exportWavWorker';
+import { cloneDeep } from 'lodash';
 
 export default class {
   constructor() {
     this.tracks = [];
+    this.cloneTracks = [];
     this.soloedTracks = [];
     this.mutedTracks = [];
     this.collapsedTracks = [];
@@ -344,6 +346,9 @@ export default class {
         return;
       }
       const { start, end } = this.getTimeSelection();
+      if (start === end) {
+        return;
+      }
       const sampleRate = activeTrack.buffer.sampleRate;
       const startIdx = secondsToSamples(start, sampleRate);
       const endIdx = secondsToSamples(end, sampleRate);
@@ -390,12 +395,6 @@ export default class {
       this.draw(this.render());
 
       this.ee.emit('cutfinishd', start, end, activeTrack);
-
-      // track.trim(timeSelection.start, timeSelection.end);
-      // track.calculatePeaks(this.samplesPerPixel, this.sampleRate);
-
-      // this.setTimeSelection(0, 0);
-      // this.drawRequest();
     });
 
     ee.on('cut', (start, end, index) => {
@@ -944,6 +943,7 @@ export default class {
         });
 
         this.tracks = this.tracks.concat(tracks);
+        this.cloneTracks = cloneDeep(this.tracks);
         this.adjustDuration();
         this.draw(this.render());
 

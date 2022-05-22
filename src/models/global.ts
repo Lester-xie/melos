@@ -8,6 +8,13 @@ export interface UserInfo {
   avatar: string;
 }
 
+interface RevocationItem {
+  name: 'shift' | 'cut' | 'copy';
+  targetIndex: number;
+  prevStartTime?: number;
+  currentStartTime?: number;
+}
+
 export interface TrackInfo {
   src: string;
   name: string;
@@ -36,6 +43,7 @@ export interface GlobalModelState {
   socketOnlineUserIds: Array<string>;
   userIdMappingStreamId: { [key: string]: string };
   currentTracks: Array<TrackInfo>;
+  revocationList: Array<RevocationItem>;
 }
 
 export interface GlobalModelType {
@@ -72,6 +80,7 @@ const GlobalModel: GlobalModelType = {
     socketOnlineUserIds: [],
     userIdMappingStreamId: {},
     currentTracks: [],
+    revocationList: [],
   },
 
   effects: {
@@ -98,6 +107,7 @@ const GlobalModel: GlobalModelType = {
     // @ts-ignore
     updateRow(state, action) {
       const trackList = cloneDeep(state?.currentTracks);
+      const revocationList = cloneDeep(state?.revocationList);
       switch (action.attr) {
         case 'cut': {
           if (trackList[action.index].cut) {
@@ -110,6 +120,7 @@ const GlobalModel: GlobalModelType = {
               { start: action.start, end: action.end },
             ];
           }
+          revocationList.push({ name: 'cut', targetIndex: action.index });
           break;
         }
         case 'copy': {
@@ -130,6 +141,7 @@ const GlobalModel: GlobalModelType = {
               },
             ];
           }
+          revocationList.push({ name: 'copy', targetIndex: action.index });
           break;
         }
         case 'mute': {
@@ -150,10 +162,40 @@ const GlobalModel: GlobalModelType = {
         }
         case 'startTime': {
           trackList[action.index].startTime = action.startTime;
+          let lastShiftIndex = -1;
+          revocationList.forEach((item: RevocationItem, index: number) => {
+            if (item.name === 'shift' && action.index === item.targetIndex) {
+              lastShiftIndex = index;
+            }
+          });
+          if (lastShiftIndex === -1) {
+            revocationList.push({
+              name: 'shift',
+              prevStartTime: 0,
+              currentStartTime: action.startTime,
+              targetIndex: action.index,
+            });
+          } else {
+            revocationList.push({
+              name: 'shift',
+              prevStartTime: revocationList[lastShiftIndex].currentStartTime,
+              currentStartTime: action.startTime,
+              targetIndex: action.index,
+            });
+          }
           break;
         }
         case 'reloadTrack': {
           const data = trackList[action.index];
+          const waitDelArr: any[] = [];
+          revocationList.forEach((item: RevocationItem) => {
+            if (item.targetIndex === action.index) {
+              waitDelArr.push(action.index);
+            }
+          });
+          waitDelArr.forEach((index) => {
+            revocationList.splice(index, 1);
+          });
           trackList[action.index] = {
             src: data.src,
             name: data.name,
@@ -175,6 +217,7 @@ const GlobalModel: GlobalModelType = {
       return {
         ...state,
         currentTracks: trackList,
+        revocationList: revocationList,
       };
     },
     // @ts-ignore

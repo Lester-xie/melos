@@ -40,11 +40,6 @@
         }
       }
 
-      .disabled {
-        opacity: 0.4;
-        cursor: default;
-      }
-
       .active {
         color: #3183ff;
       }
@@ -58,28 +53,6 @@
       background-color: #1b1c1d;
       min-width: 600px;
       overflow-x: auto;
-
-      .addBtn {
-        background-color: #3183ff;
-        width: 250px;
-        height: 40px;
-        padding: 4px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        border-radius: 16px;
-        color: white;
-        margin: 0 10px;
-
-        &:active {
-          box-shadow: inset 0 0 16px rgba(168, 185, 255);
-        }
-
-        span {
-          font-size: 16px;
-          height: 16px;
-        }
-      }
 
       .trackTransport {
         height: 46px;
@@ -157,6 +130,15 @@
             box-shadow: inset 0 0 10px #262626;
           }
         }
+      }
+    }
+
+    .disabled {
+      opacity: 0.4;
+      cursor: default;
+      &:hover,
+      &:active {
+        box-shadow: none !important;
       }
     }
   }
