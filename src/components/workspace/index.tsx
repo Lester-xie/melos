@@ -8,13 +8,18 @@ import { saveAs } from 'file-saver';
 import { message, Spin, Modal } from 'antd';
 import { cloneDeep } from 'lodash';
 import styles from './index.less';
-import { PlusOutlined, SwapOutlined, UndoOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  SwapOutlined,
+  UndoOutlined,
+  LoadingOutlined,
+} from '@ant-design/icons';
 import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
 import { connect } from 'umi';
 import { debouncePushAction, getMemberList } from '@/services/api';
-import { GlobalModelState } from '@/models/global';
+import { GlobalModelState, isInitTrack } from '@/models/global';
 import { ConnectProps } from '@@/plugin-dva/connect';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -49,11 +54,14 @@ const Workspace = ({
   const [socket, setSocket] = useState<any>(null);
   const [showLoading, setShowLoading] = useState(false);
   const [clearModalVisible, setClearModalVisible] = useState(false);
+  const [revokeLoading, setRevokeLoading] = useState(false);
+  const [resetDisabled, setResetDisabled] = useState(true);
   const {
     project: currentProject,
     userRoleInCurrentProject,
     currentTracks,
     revocationList,
+    userInfo,
   } = global;
 
   const onFileSelect = (file: any) => {
@@ -76,13 +84,23 @@ const Workspace = ({
               cut: null,
               startTime: 0,
               assetId: file.assetId,
+              userId: userInfo?.id,
             },
           ],
         },
       });
     });
+    file.userId = userInfo?.id;
     debouncePushAction(currentProject.id, 'addTrack', file);
   };
+
+  useEffect(() => {
+    if (currentTracks.length > 0) {
+      setResetDisabled(currentTracks.every((item) => isInitTrack(item)));
+    } else {
+      setResetDisabled(true);
+    }
+  }, [currentTracks]);
 
   useEffect(() => {
     setToneCtx(Tone.getContext());
@@ -271,72 +289,93 @@ const Workspace = ({
     ee.emit('trim');
   };
 
-  const onRevokeClicked = useCallback(() => {
-    if (revocationList.length > 0) {
-      const cloneRevocationList = cloneDeep(revocationList);
-      const cloneCurrentTracks = cloneDeep(currentTracks);
-      const prevAction = cloneRevocationList.pop();
-      const optionName = prevAction.name;
-      switch (optionName) {
-        case 'shift': {
-          ee.emit(
-            'shift',
-            -(prevAction.currentStartTime - prevAction.prevStartTime),
-            playContext.tracks[prevAction.targetIndex],
-          );
-          cloneCurrentTracks[prevAction.targetIndex].startTime =
-            prevAction.prevStartTime;
-          dispatch?.({
-            type: 'global/update',
-            payload: {
-              currentTracks: [...cloneCurrentTracks],
-              revocationList: [...cloneRevocationList],
-            },
+  const onRevokeClicked = useCallback(
+    (index: number | null, callback: () => void) => {
+      if (revocationList.length > 0) {
+        const cloneRevocationList = cloneDeep(revocationList);
+        const cloneCurrentTracks = cloneDeep(currentTracks);
+        let prevAction: any = null;
+        if (index !== null) {
+          let findIndex = -1;
+          cloneRevocationList.forEach((item: any, i: number) => {
+            if (item.targetIndex === index) {
+              findIndex = i;
+            }
           });
-          debouncePushAction(currentProject.id, 'changeShift', {
-            value: prevAction.prevStartTime,
-            index: prevAction.targetIndex,
-          });
-          break;
+          if (findIndex === -1) {
+            return;
+          }
+          prevAction = cloneRevocationList.splice(findIndex, 1)[0];
+        } else {
+          prevAction = cloneRevocationList.pop();
         }
-        case 'cut':
-        case 'copy': {
-          const cloneData = cloneDeep(
-            cloneCurrentTracks[prevAction.targetIndex][optionName],
-          );
-          cloneData.pop();
-          cloneCurrentTracks[prevAction.targetIndex][optionName] = [
-            ...cloneData,
-          ];
-          dispatch?.({
-            type: 'global/update',
-            payload: {
-              currentTracks: [...cloneCurrentTracks],
-              revocationList: [...cloneRevocationList],
-            },
-          });
-          ee.emit(
-            'reload',
-            trackList[prevAction.targetIndex],
-            prevAction.targetIndex,
-            'auto',
-            () => {
-              cloneCurrentTracks.forEach((item: any, index: number) => {
-                if (index === prevAction.targetIndex) {
-                  handleInit(item, index);
-                }
-              });
-              setTrackList([...playContext.tracks]);
-            },
-          );
-          debouncePushAction(currentProject.id, 'revoke', {
-            value: optionName,
-            index: prevAction.targetIndex,
-          });
+        const optionName = prevAction.name;
+        switch (optionName) {
+          case 'shift': {
+            ee.emit(
+              'shift',
+              -(prevAction.currentStartTime - prevAction.prevStartTime),
+              playContext.tracks[prevAction.targetIndex],
+            );
+            cloneCurrentTracks[prevAction.targetIndex].startTime =
+              prevAction.prevStartTime;
+            dispatch?.({
+              type: 'global/update',
+              payload: {
+                currentTracks: [...cloneCurrentTracks],
+                revocationList: [...cloneRevocationList],
+              },
+            });
+            debouncePushAction(currentProject.id, 'changeShift', {
+              value: prevAction.prevStartTime,
+              index: prevAction.targetIndex,
+            });
+            break;
+          }
+          case 'cut':
+          case 'copy': {
+            if (index === null) {
+              setRevokeLoading(true);
+            }
+            const cloneData = cloneDeep(
+              cloneCurrentTracks[prevAction.targetIndex][optionName],
+            );
+            cloneData.pop();
+            cloneCurrentTracks[prevAction.targetIndex][optionName] = [
+              ...cloneData,
+            ];
+            dispatch?.({
+              type: 'global/update',
+              payload: {
+                currentTracks: [...cloneCurrentTracks],
+                revocationList: [...cloneRevocationList],
+              },
+            });
+            ee.emit(
+              'reload',
+              trackList[prevAction.targetIndex],
+              prevAction.targetIndex,
+              'auto',
+              () => {
+                cloneCurrentTracks.forEach((item: any, index: number) => {
+                  if (index === prevAction.targetIndex) {
+                    handleInit(item, index);
+                  }
+                });
+                setTrackList([...playContext.tracks]);
+                callback();
+              },
+            );
+            debouncePushAction(currentProject.id, 'revoke', {
+              value: optionName,
+              index: prevAction.targetIndex,
+            });
+          }
         }
       }
-    }
-  }, [revocationList, playContext, currentTracks]);
+    },
+    [revocationList, playContext, currentTracks],
+  );
 
   const onDownloadBtnClicked = () => {
     if (playContext && playContext.tracks.length > 0) {
@@ -370,6 +409,10 @@ const Workspace = ({
       },
     });
     debouncePushAction(currentProject.id, 'removeTrack', { index });
+  };
+
+  const onSimpleRevokeClicked = (index: number, callback: any) => {
+    onRevokeClicked(index, callback);
   };
 
   const onCopyBtnClicked = () => {
@@ -426,6 +469,7 @@ const Workspace = ({
           cut: [],
           startTime: 0,
           assetId: item.assetId,
+          userId: item.userId,
         };
       });
       setClearModalVisible(false);
@@ -512,9 +556,10 @@ const Workspace = ({
           if (userId !== user.id) {
             return;
           }
-          if (projectId !== global.project.id) {
-            openNotification(projectId, projectName);
-          }
+          // if (projectId !== global.project.id) {
+          //   openNotification(projectId, projectName);
+          // }
+          openNotification(projectId, projectName);
           return;
         }
         const projectId = arg.project;
@@ -653,7 +698,6 @@ const Workspace = ({
               // 撤销
               case 'revoke': {
                 const cloneCurrentTracks = cloneDeep(currentTracks);
-                console.log(currentTracks);
                 const cloneData = cloneDeep(
                   cloneCurrentTracks[data.index][data.value],
                 );
@@ -749,12 +793,23 @@ const Workspace = ({
             <button className={styles.pasteBtn} onClick={onPasteBtnClicked} />
             <button className={styles.cutBtn} onClick={onTrimBtnClicked} />
             <button
-              onClick={onRevokeClicked}
-              className={revocationList.length === 0 ? styles.disabled : ''}
+              onClick={() =>
+                onRevokeClicked(null, () => setRevokeLoading(false))
+              }
+              className={
+                revocationList.length === 0 || revokeLoading
+                  ? styles.disabled
+                  : ''
+              }
             >
-              <UndoOutlined />
+              {revokeLoading ? <LoadingOutlined /> : <UndoOutlined />}
             </button>
-            <button onClick={onClearBtnClicked} className={styles.clearBtn}>
+            <button
+              onClick={onClearBtnClicked}
+              className={`${styles.clearBtn} ${
+                resetDisabled ? styles.disabled : ''
+              }`}
+            >
               <img
                 src={require('@/assets/workshop/clear.png')}
                 alt="clear"
@@ -771,7 +826,11 @@ const Workspace = ({
             onClose={() => setShowResource(false)}
             onSelect={onFileSelect}
           />
-          <TrackList tracks={trackList} onDeleteClicked={onDeleteClicked} />
+          <TrackList
+            tracks={trackList}
+            onDeleteClicked={onDeleteClicked}
+            onRevokeClicked={onSimpleRevokeClicked}
+          />
         </div>
         <div className={styles.trackContainer}>
           <div className={styles.trackWrap}>

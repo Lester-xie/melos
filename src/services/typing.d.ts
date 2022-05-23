@@ -15,7 +15,7 @@ declare namespace API {
     content?: string;
     isSelf?: boolean;
     id: string | number;
-    avatar?: string;
+    userId?: string;
     name?: string;
   };
   type MemberType = {

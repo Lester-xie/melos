@@ -70,8 +70,8 @@ const CustomTab = () => {
             id: generateId(),
             content: event.data,
             isSelf: false,
-            avatar: user.user?.avatar?.url,
             name: user.user.name,
+            userId: user.user._id,
           },
         ];
       });
@@ -203,7 +203,7 @@ const CustomTab = () => {
     setRecords((records) => {
       return [
         ...records,
-        { id: generateId(), content: val, isSelf: true, avatar: user.avatar },
+        { id: generateId(), content: val, isSelf: true, userId: user.id },
       ];
     });
     RTCRef.current.send(val);

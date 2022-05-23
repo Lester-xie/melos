@@ -188,9 +188,9 @@ const GlobalModel: GlobalModelType = {
         case 'reloadTrack': {
           const data = trackList[action.index];
           const waitDelArr: any[] = [];
-          revocationList.forEach((item: RevocationItem) => {
+          revocationList.forEach((item: RevocationItem, index: number) => {
             if (item.targetIndex === action.index) {
-              waitDelArr.push(action.index);
+              waitDelArr.push(index);
             }
           });
           waitDelArr.forEach((index) => {
@@ -207,12 +207,15 @@ const GlobalModel: GlobalModelType = {
             cut: null,
             startTime: 0,
             assetId: data.assetId,
+            userId: data.userId,
           };
           break;
         }
       }
-      // @ts-ignore
-      updateProject(state.project.id, state.project.name, trackList);
+      if (state?.userRoleInCurrentProject !== 'guest') {
+        // @ts-ignore
+        updateProject(state.project.id, state.project.name, trackList);
+      }
 
       return {
         ...state,
@@ -233,6 +236,8 @@ const GlobalModel: GlobalModelType = {
         copy: null,
         cut: null,
         startTime: 0,
+        assetId: action.data.assetId,
+        userId: action.data.userId,
       });
       return {
         ...state,
@@ -255,3 +260,15 @@ const GlobalModel: GlobalModelType = {
 };
 
 export default GlobalModel;
+
+export function isInitTrack(trackInfo: TrackInfo) {
+  return (
+    !trackInfo.mute &&
+    !trackInfo.solo &&
+    trackInfo.gain === 1 &&
+    trackInfo.stereoPan === 0 &&
+    (trackInfo.copy === null || trackInfo.copy?.length == 0) &&
+    (trackInfo.cut === null || trackInfo.cut?.length == 0) &&
+    trackInfo.startTime === 0
+  );
+}

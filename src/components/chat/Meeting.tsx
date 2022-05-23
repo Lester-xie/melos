@@ -43,7 +43,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
   const [selfUser, setSelfUser] = useState<any>({
     user: {
       name: '',
-      avatar: { url: '' },
+      _id: '',
     },
     isMute: true,
     role: '',
@@ -53,6 +53,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
     const self = JSON.parse(localStorage.getItem('user') || '{}');
     if (globalState.memberList.length > 0) {
       const me = globalState.memberList.find((m) => m.user._id === self.id);
+      console.log(me);
       if (me) {
         setSelfUser(me);
       }
@@ -66,7 +67,6 @@ const Meeting: React.FC<IMeeting> = (props) => {
 
   // 离开房间
   const leaveRoom = () => {
-    console.log('leaving room');
     leaveRoomForMe();
   };
 
@@ -134,8 +134,8 @@ const Meeting: React.FC<IMeeting> = (props) => {
   };
 
   const inviteMember = () => {
-    if(!selectValue){
-      message.warn('Please select a member first').then()
+    if (!selectValue) {
+      message.warn('Please select a member first').then();
       return;
     }
     props.inviteUser(selectValue);
@@ -150,7 +150,12 @@ const Meeting: React.FC<IMeeting> = (props) => {
     <div className={styles.meeting}>
       <div className={styles.self}>
         <div className={styles.left}>
-          <img src={selfUser.user?.avatar?.url || defaultImg} alt={'avatar'} />
+          {selfUser.user._id && (
+            <img
+              src={`https://joeschmoe.io/api/v1/${selfUser.user._id}`}
+              alt={'avatar'}
+            />
+          )}
           <span
             className={
               socketConnectSuccess
@@ -225,10 +230,12 @@ const Meeting: React.FC<IMeeting> = (props) => {
               <section key={m._id}>
                 <div className={styles.top}>
                   <div className={styles.left}>
-                    <img
-                      src={m.user?.avatar?.url || defaultImg}
-                      alt={'avatar'}
-                    />
+                    {m.user?._id && (
+                      <img
+                        src={`https://joeschmoe.io/api/v1/${m.user?._id}`}
+                        alt={'avatar'}
+                      />
+                    )}
                     <span
                       className={
                         socketOnlineUserIds.includes(m.user._id)

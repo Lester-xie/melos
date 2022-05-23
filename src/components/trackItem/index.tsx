@@ -1,12 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Slider } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  LoadingOutlined,
+  UndoOutlined,
+} from '@ant-design/icons';
 import classNames from 'classnames';
 import styles from './index.less';
 import { Popconfirm } from 'antd';
 import { debouncePushAction } from '@/services/api';
 import { useSelector, useDispatch } from 'umi';
 import useDebounce from '@/hooks/useDebounce';
+import { isInitTrack } from '@/models/global';
 
 interface Props {
   trackItem: any;
@@ -17,18 +22,28 @@ interface Props {
     status: string;
   };
   onDelete: () => void;
+  onRevoke: (callback: any) => void;
   index: number;
 }
 
 type ShiftType = 'auto' | 'manual';
 
-export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
+export default function TrackItem({
+  trackItem,
+  item,
+  onDelete,
+  index,
+  onRevoke,
+}: Props) {
   const [muted, setMuted] = useState<boolean>(false);
   const [solo, setSolo] = useState<boolean>(false);
   const [gain, setGain] = useState<number>(100);
   const [stereopan, setStereopan] = useState<number>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [shiftType, setShiftType] = useState<ShiftType>('auto');
+  const [disabled, setDisabled] = useState(true);
+  const [resetDisabled, setResetDisabled] = useState(true);
+  const [revokeLoading, setRevokeLoading] = useState(false);
 
   const debouncedStartTime = useDebounce(startTime, 500) as number;
   const debouncedShiftType = useDebounce(shiftType, 500) as ShiftType;
@@ -36,6 +51,21 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
   const currentProject: { name: string; id: string } = useSelector(
     (state: any) => state.global.project,
   );
+  const revocationList = useSelector(
+    (state: any) => state.global.revocationList,
+  );
+  const currentTracks = useSelector((state: any) => state.global.currentTracks);
+
+  useEffect(() => {
+    setDisabled(
+      revocationList.findIndex((item: any) => item.targetIndex === index) ===
+        -1,
+    );
+  }, [revocationList]);
+
+  useEffect(() => {
+    setResetDisabled(isInitTrack(currentTracks[index]));
+  }, [currentTracks]);
 
   const dispatch = useDispatch();
 
@@ -204,6 +234,15 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
     trackItem.ee.emit('reload', trackItem, index, 'manual');
   };
 
+  useEffect(() => {
+    isInitTrack(currentTracks[index]);
+  }, [currentTracks]);
+
+  const onRevokeClicked = () => {
+    setRevokeLoading(true);
+    onRevoke(() => setRevokeLoading(false));
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.blockUpper}>
@@ -213,7 +252,8 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
             alt={item?.userName}
             src={item?.avatar}
           />
-          <div className={classNames(styles.indicator, item?.status)} />
+
+          {/*<div className={classNames(styles.indicator, item?.status)} />*/}
         </div>
         <div className={styles.nameWrapper}>
           <span className={styles.name}>{item?.name}</span>
@@ -232,15 +272,22 @@ export default function TrackItem({ trackItem, item, onDelete, index }: Props) {
             >
               S
             </button>
-            <button type="button">W</button>
+            <button
+              type="button"
+              onClick={onRevokeClicked}
+              disabled={disabled || revokeLoading}
+            >
+              {revokeLoading ? <LoadingOutlined /> : <UndoOutlined />}
+            </button>
             <Popconfirm
               placement="top"
               title="Confirm reset this track？"
               onConfirm={onReloadClicked}
               okText="Yes"
               cancelText="No"
+              disabled={resetDisabled}
             >
-              <button type="button">
+              <button type="button" disabled={resetDisabled}>
                 <div className={styles.circleIcon} />
               </button>
             </Popconfirm>
