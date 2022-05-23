@@ -252,7 +252,6 @@ export default function TrackItem({
             alt={item?.userName}
             src={item?.avatar}
           />
-
           {/*<div className={classNames(styles.indicator, item?.status)} />*/}
         </div>
         <div className={styles.nameWrapper}>
