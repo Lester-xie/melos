@@ -28,12 +28,12 @@ export interface TrackInfo {
   targetTrackIndex: number;
 }
 
-export interface chatRecordType{
-  id:string,
-  content:string,
-  isSelf:boolean,
-  userId:string,
-  name?:string
+export interface chatRecordType {
+  id: string;
+  content: string;
+  isSelf: boolean;
+  userId: string;
+  name?: string;
 }
 
 export interface GlobalModelState {
@@ -52,7 +52,7 @@ export interface GlobalModelState {
   userIdMappingStreamId: { [key: string]: string };
   currentTracks: Array<TrackInfo>;
   revocationList: Array<RevocationItem>;
-  chatRecord:Array<chatRecordType>
+  chatRecord: Array<chatRecordType>;
 }
 
 export interface GlobalModelType {
@@ -90,7 +90,7 @@ const GlobalModel: GlobalModelType = {
     userIdMappingStreamId: {},
     currentTracks: [],
     revocationList: [],
-    chatRecord:[],
+    chatRecord: [],
   },
 
   effects: {
@@ -272,13 +272,17 @@ const GlobalModel: GlobalModelType = {
 export default GlobalModel;
 
 export function isInitTrack(trackInfo: TrackInfo) {
-  return (
-    !trackInfo.mute &&
-    !trackInfo.solo &&
-    trackInfo.gain === 1 &&
-    trackInfo.stereoPan === 0 &&
-    (trackInfo.copy === null || trackInfo.copy?.length == 0) &&
-    (trackInfo.cut === null || trackInfo.cut?.length == 0) &&
-    trackInfo.startTime === 0
-  );
+  if (trackInfo) {
+    return (
+      !trackInfo.mute &&
+      !trackInfo.solo &&
+      trackInfo.gain === 1 &&
+      trackInfo.stereoPan === 0 &&
+      (trackInfo.copy === null || trackInfo.copy?.length == 0) &&
+      (trackInfo.cut === null || trackInfo.cut?.length == 0) &&
+      trackInfo.startTime === 0
+    );
+  } else {
+    return false;
+  }
 }
