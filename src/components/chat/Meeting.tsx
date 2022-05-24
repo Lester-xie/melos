@@ -1,5 +1,5 @@
 import { Select, Button, Popconfirm, message } from 'antd';
-import { GlobalModelState, useSelector,useDispatch } from 'umi';
+import { GlobalModelState, useSelector, useDispatch } from 'umi';
 import { PlusOutlined } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import callVoice from '../../assets/chat/call_voice.png';
@@ -75,14 +75,14 @@ const Meeting: React.FC<IMeeting> = (props) => {
   };
 
   // 自己加入房间
-  const JoinRoom = ()=>{
+  const JoinRoom = () => {
     dispatch({
       type: 'global/save',
       payload: {
         roomId: `${globalState.project.id}-audio-room`,
       },
     });
-  }
+  };
 
   // 拉起一个房间
   const createOrJoinRoom = (userId: string) => {
@@ -150,17 +150,22 @@ const Meeting: React.FC<IMeeting> = (props) => {
     props.inviteUser(selectValue);
   };
 
-  const tickMember = (id: string,role: 'admin' | 'guest' | 'editor') => {
+  const tickMember = (id: string, role: 'admin' | 'guest' | 'editor') => {
     // 判断权限,guest 只能操作自己
     if (selfUser.role === 'guest') {
-      message.warn('You can\'t tick others from the meeting').then();
+      message.warn("You can't tick others from the meeting").then();
       return;
     }
     if (selfUser.role === 'editor' && role !== 'guest') {
-      message.warn('You can\'t tick this member').then();
+      message.warn("You can't tick this member").then();
       return;
     }
     tickMemberOutRoom(id);
+  };
+
+  // 权限发生改变
+  const onRoleChangeFun = (MId: string, e: 'admin' | 'editor' | 'guest') => {
+    onRoleChange(MId, e);
   };
 
   const { muteMembersIds, memberList } = globalState;
@@ -270,9 +275,14 @@ const Meeting: React.FC<IMeeting> = (props) => {
                         defaultValue={m.role}
                         style={{ width: 120 }}
                         size="small"
-                        onChange={(e: string) => onRoleChange(m._id, e)}
+                        disabled={selfUser.role === 'guest'}
+                        onChange={(e: 'admin' | 'editor' | 'guest') =>
+                          onRoleChangeFun(m._id, e)
+                        }
                       >
-                        <Option value="admin">admin</Option>
+                        {selfUser.role === 'admin' && (
+                          <Option value="admin">admin</Option>
+                        )}
                         <Option value="editor">editor</Option>
                         <Option value="guest">guest</Option>
                       </Select>
