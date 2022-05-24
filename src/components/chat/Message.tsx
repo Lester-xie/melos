@@ -1,36 +1,51 @@
 import styles from './index.less';
 import { FC, useEffect, useRef, useState } from 'react';
-import { AudioOutlined } from '@ant-design/icons';
-import { Button, Input } from 'antd';
-import { useSelector } from 'umi';
+import {Input } from 'antd';
+import {useDispatch, useSelector} from 'umi';
+import {generateId} from "@/components/chat/Custom";
+import {sendMsg} from "@/services/api";
+import {GlobalModelState} from "@/models/global";
 
-interface IMessage {
-  records: Array<API.messageRecord>;
-  send: (val: string) => void;
-}
-const Message: FC<IMessage> = (props) => {
-  const { records, send } = props;
+const Message: FC = () => {
+  const self = JSON.parse(localStorage.getItem('user') || '{}');
   const [inputValue, setInputValue] = useState('');
   const msgRef = useRef<HTMLDivElement>(null);
+  const globalState: GlobalModelState = useSelector(
+    (state: any) => state.global,
+  );
+  const {project,chatRecord} = globalState
+  const dispatch = useDispatch();
 
   // 按下enter键
-  const onPressEnter = (e: any) => {
+  const onPressEnter = async (e: any) => {
     const value = e.target.value;
+
     if (value) {
-      send(value);
-      setInputValue('');
+      // 1.发送消息--->调用成功
+      const id = generateId()
+      await sendMsg(id,project.id,self.id,value,self.name)
+      // 2.存储发送内容
+      const item =  { id, content: value, isSelf: true, userId: self.id,name:self.name}
+      dispatch({
+        type: 'global/save',
+        payload: {
+          chatRecord: [...chatRecord,item],
+        },
+      });
+      // 3.清空输入框的值
+     setInputValue('');
     }
   };
 
   useEffect(() => {
     if (
       msgRef.current &&
-      records.length > 0 &&
-      records[records.length - 1].isSelf
+      chatRecord.length > 0 &&
+      chatRecord[chatRecord.length - 1].isSelf
     ) {
       msgRef.current.scrollTop = msgRef.current.scrollHeight;
     }
-  }, [records]);
+  }, [chatRecord]);
   return (
     <div className={styles.message}>
       <div className={styles.title}>Members</div>
@@ -38,7 +53,7 @@ const Message: FC<IMessage> = (props) => {
         className={[styles.recordContainer, 'customScroll'].join(' ')}
         ref={msgRef}
       >
-        {records.map((r) => {
+        {chatRecord.map((r) => {
           if (r.isSelf) {
             return (
               <section className={styles.recordSection} key={r.id}>
@@ -83,7 +98,6 @@ const Message: FC<IMessage> = (props) => {
             }}
             onPressEnter={(e) => onPressEnter(e)}
           />
-          {/*<Button icon={<AudioOutlined />} />*/}
         </Input.Group>
       </div>
     </div>

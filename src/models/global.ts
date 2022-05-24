@@ -28,6 +28,14 @@ export interface TrackInfo {
   targetTrackIndex: number;
 }
 
+export interface chatRecordType{
+  id:string,
+  content:string,
+  isSelf:boolean,
+  userId:string,
+  name?:string
+}
+
 export interface GlobalModelState {
   memberList: Array<API.MemberType>;
   project: {
@@ -44,6 +52,7 @@ export interface GlobalModelState {
   userIdMappingStreamId: { [key: string]: string };
   currentTracks: Array<TrackInfo>;
   revocationList: Array<RevocationItem>;
+  chatRecord:Array<chatRecordType>
 }
 
 export interface GlobalModelType {
@@ -81,6 +90,7 @@ const GlobalModel: GlobalModelType = {
     userIdMappingStreamId: {},
     currentTracks: [],
     revocationList: [],
+    chatRecord:[],
   },
 
   effects: {

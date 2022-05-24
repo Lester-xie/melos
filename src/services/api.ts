@@ -257,3 +257,20 @@ export async function getAllOnlineUser() {
     },
   });
 }
+
+// 发送消息
+export async function sendMsg(id:string|number,projectId:string,userId:string,content:string,name:string) {
+  return request('project/action/create', {
+    method: 'POST',
+    data: {
+      event: 'sendMessage',
+      extraBody: {
+        projectId,
+        userId,
+        content,
+        name,
+        id,
+      },
+    },
+  });
+}

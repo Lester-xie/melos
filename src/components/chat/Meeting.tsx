@@ -1,5 +1,5 @@
 import { Select, Button, Popconfirm, message } from 'antd';
-import { GlobalModelState, useSelector } from 'umi';
+import { GlobalModelState, useSelector,useDispatch } from 'umi';
 import { PlusOutlined } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import callVoice from '../../assets/chat/call_voice.png';
@@ -8,14 +8,12 @@ import mute from '../../assets/chat/mute.png';
 import unmute from '../../assets/chat/unmute.png';
 import tick from '../../assets/chat/tick.png';
 import { getUserList, inviteUserJoinRoom } from '@/services/api';
-import defaultImg from '../../assets/chat/default.png';
 import styles from './index.less';
 
 interface IMeeting {
   inviteUser: (id: string) => void;
   toggleMute: (flag: boolean) => void;
   delMember: (id: string, userId: string) => void;
-  goCreateOrJoinRoom: () => void;
   onRoleChange: (memberId: string, e: any) => void;
   muteOrUnmuteOthers: (userId: string, flag: boolean) => void;
   tickMemberOutRoom: (userId: string) => void;
@@ -27,7 +25,6 @@ const Meeting: React.FC<IMeeting> = (props) => {
   const {
     toggleMute,
     delMember,
-    goCreateOrJoinRoom,
     onRoleChange,
     muteOrUnmuteOthers,
     leaveRoomForMe,
@@ -38,6 +35,8 @@ const Meeting: React.FC<IMeeting> = (props) => {
   const globalState: GlobalModelState = useSelector(
     (state: any) => state.global,
   );
+
+  const dispatch = useDispatch();
 
   const { socketConnectSuccess, socketOnlineUserIds } = globalState;
   const [selfUser, setSelfUser] = useState<any>({
@@ -74,6 +73,16 @@ const Meeting: React.FC<IMeeting> = (props) => {
   const delMemberUser = (id: string, userId: string) => {
     delMember(id, userId);
   };
+
+  // 自己加入房间
+  const JoinRoom = ()=>{
+    dispatch({
+      type: 'global/save',
+      payload: {
+        roomId: `${globalState.project.id}-audio-room`,
+      },
+    });
+  }
 
   // 拉起一个房间
   const createOrJoinRoom = (userId: string) => {
@@ -141,11 +150,20 @@ const Meeting: React.FC<IMeeting> = (props) => {
     props.inviteUser(selectValue);
   };
 
-  const tickMember = (id: string) => {
+  const tickMember = (id: string,role: 'admin' | 'guest' | 'editor') => {
+    // 判断权限,guest 只能操作自己
+    if (selfUser.role === 'guest') {
+      message.warn('You can\'t tick others from the meeting').then();
+      return;
+    }
+    if (selfUser.role === 'editor' && role !== 'guest') {
+      message.warn('You can\'t tick this member').then();
+      return;
+    }
     tickMemberOutRoom(id);
   };
 
-  const { muteMembersIds, memberList, onlineMemberIds } = globalState;
+  const { muteMembersIds, memberList } = globalState;
   return (
     <div className={styles.meeting}>
       <div className={styles.self}>
@@ -179,7 +197,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
                 src={call_invite}
                 alt="callInvite"
                 style={{ marginRight: '5px' }}
-                onClick={goCreateOrJoinRoom}
+                onClick={JoinRoom}
               />
             )}
             {globalState.onlineMemberIds.includes(selfUser.user._id) &&
@@ -267,7 +285,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
                       <img
                         src={callVoice}
                         alt="callVoice"
-                        onClick={() => tickMember(m.user._id)}
+                        onClick={() => tickMember(m.user._id, m.role)}
                       />
                     ) : (
                       <img

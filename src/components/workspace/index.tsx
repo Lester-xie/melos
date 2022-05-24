@@ -431,6 +431,7 @@ const Workspace = ({
       type: 'global/save',
       payload: {
         project: { id: projectId, name: projectName },
+        roomId: `${global.project.id}-audio-room`,
       },
     });
   };
@@ -532,6 +533,26 @@ const Workspace = ({
               payload: { socketOnlineUserIds: onlineUserIds },
             });
           }
+          return;
+        }
+        if (arg.event === 'sendMessage') {
+          console.log(arg);
+          const { id, content, projectId, userId, name } = arg.extraBody;
+          // 排除自己
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          if (userId === user.id) return;
+          // 自己是不是在这个项目中
+          if (projectId !== global.project.id) return;
+          // 更新chatRecord列表
+          dispatch?.({
+            type: 'global/save',
+            payload: {
+              chatRecord: [
+                ...global.chatRecord,
+                { id, content, isSelf: false, userId, name },
+              ],
+            },
+          });
           return;
         }
         if (arg.event === 'memberChanged') {

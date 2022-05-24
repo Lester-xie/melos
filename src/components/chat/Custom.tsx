@@ -2,13 +2,7 @@ import { message, Tabs } from 'antd';
 import styles from '@/components/chat/index.less';
 import Message from '@/components/chat/Message';
 import Meeting from '@/components/chat/Meeting';
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector, GlobalModelState } from 'umi';
 import { socketPrefix } from '@/config';
 import {
@@ -20,13 +14,12 @@ import {
 } from '@/services/api';
 const { TabPane } = Tabs;
 
-const generateId = () => {
+export const generateId = () => {
   return new Date().getTime() + parseInt((Math.random() * 10000).toString());
 };
 const CustomTab = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [active, setActive] = useState('meeting');
-  const [records, setRecords] = useState<API.messageRecord[]>([]);
 
   const globalState: GlobalModelState = useSelector(
     (state: any) => state.global,
@@ -63,18 +56,6 @@ const CustomTab = () => {
         (m) => m.user._id === event.extra.userId,
       );
       if (!user) return;
-      setRecords((records) => {
-        return [
-          ...records,
-          {
-            id: generateId(),
-            content: event.data,
-            isSelf: false,
-            name: user.user.name,
-            userId: user.user._id,
-          },
-        ];
-      });
     },
     [memberRef],
   );
@@ -97,7 +78,7 @@ const CustomTab = () => {
       const userId = extra.userId;
 
       const muteIds = [...onMuteIdsRef.current];
-      let ids: Array<string> = [];
+      let ids: Array<string>;
       if (isAudioMuted) {
         const muteSet = new Set(muteIds);
         muteSet.add(userId);
@@ -115,10 +96,6 @@ const CustomTab = () => {
     },
     [onMuteIdsRef],
   );
-
-  const muteOrUnMuteSomeBodyCallback = () => {
-    console.log(123);
-  };
 
   const onStreamCallback = useCallback(
     (event: any) => {
@@ -199,16 +176,6 @@ const CustomTab = () => {
     }
   };
 
-  const sendMsg = (val: string) => {
-    setRecords((records) => {
-      return [
-        ...records,
-        { id: generateId(), content: val, isSelf: true, userId: user.id },
-      ];
-    });
-    RTCRef.current.send(val);
-  };
-
   // inviteMember
   const inviteUser = async (userId: string) => {
     const res = await inviteProjectUser(userId, globalState.project.id);
@@ -264,11 +231,6 @@ const CustomTab = () => {
   };
   // 拉起房间
   const goCreateOrJoinRoom = () => {
-    if (globalState.roomId) {
-      message.warning('room had been created').then();
-      return;
-    }
-    const roomId = `${globalState.project.id}-audio-room`;
     RTCRef.current = new RTCMultiConnection() as any;
     RTCRef.current.socketURL = socketPrefix;
     RTCRef.current.session = {
@@ -323,12 +285,11 @@ const CustomTab = () => {
     RTCRef.current.onstream = onStreamCallback;
     RTCRef.current.onstreamended = onstreamendedCallback;
 
-    RTCRef.current.openOrJoin(roomId);
+    RTCRef.current.openOrJoin(globalState.roomId);
     message.success('Join Room success').then();
     dispatch({
       type: 'global/save',
       payload: {
-        roomId,
         onlineMemberIds: [user.id],
       },
     });
@@ -395,10 +356,12 @@ const CustomTab = () => {
   };
 
   useEffect(() => {
-    if (globalState.project.id) {
+    if (globalState.roomId) {
       goCreateOrJoinRoom();
+    }else{
+      RTCRef.current =null
     }
-  }, [globalState.project]);
+  }, [globalState.roomId]);
   return (
     <Tabs
       activeKey={active}
@@ -441,7 +404,6 @@ const CustomTab = () => {
           inviteUser={inviteUser}
           toggleMute={toggleMute}
           delMember={delMember}
-          goCreateOrJoinRoom={goCreateOrJoinRoom}
           onRoleChange={onRoleChange}
           muteOrUnmuteOthers={muteOrUnmuteOthers}
           leaveRoomForMe={leaveRoomForMe}
@@ -449,7 +411,7 @@ const CustomTab = () => {
         />
       </TabPane>
       <TabPane tab="discuss" key="discuss">
-        {globalState.roomId && <Message records={records} send={sendMsg} />}
+        {globalState.project.id && <Message />}
       </TabPane>
     </Tabs>
   );
