@@ -64,7 +64,7 @@ const Workspace = ({
     userInfo,
   } = global;
 
-  const recordRef =  useRef<API.messageRecord[]>([])
+  const recordRef = useRef<API.messageRecord[]>([]);
 
   const onFileSelect = (file: any) => {
     setIsNoneState(false);
@@ -517,12 +517,11 @@ const Workspace = ({
         },
       });
     },
-    [recordRef,global.project],
+    [recordRef, global.project],
   );
-  useEffect(()=>{
-    recordRef.current= global.chatRecord
-  },[global.chatRecord])
-
+  useEffect(() => {
+    recordRef.current = global.chatRecord;
+  }, [global.chatRecord]);
 
   useEffect(() => {
     if (token) {
@@ -568,8 +567,8 @@ const Workspace = ({
           return;
         }
         if (arg.event === 'sendMessage') {
-          console.log(arg.extraBody)
-          receiveMsgCallback(arg)
+          console.log(arg.extraBody);
+          receiveMsgCallback(arg);
           return;
         }
         if (arg.event === 'memberChanged') {
@@ -600,6 +599,31 @@ const Workspace = ({
           openNotification(projectId, projectName);
           return;
         }
+        if (arg.event === 'rtcStatusChange') {
+          const { isConnected, userId, projectId } = arg.extraBody;
+          if (projectId !== global.project.id) {
+            return;
+          }
+          const set = new Set(global.onlineMemberIds);
+          if (isConnected) {
+            set.delete(userId);
+
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (userId === user.id) {
+              dispatch?.({
+                type: 'global/save',
+                payload: { roomId: '' },
+              });
+            }
+          } else {
+            set.add(userId);
+          }
+          dispatch?.({
+            type: 'global/save',
+            payload: { onlineMemberIds: Array.from(set) },
+          });
+        }
+
         const projectId = arg.project;
         if (projectId === currentProject.id) {
           const { type, token: actionToken, data } = arg.extraBody;
@@ -776,7 +800,7 @@ const Workspace = ({
         });
       });
     }
-  }, [socket, playContext, trackList, currentProject, currentTracks]);
+  }, [socket, playContext, global, trackList, currentProject, currentTracks]);
 
   const onClearBtnClicked = useCallback(() => {
     if (currentTracks.length > 0) {

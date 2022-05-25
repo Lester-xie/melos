@@ -7,7 +7,7 @@ import call_invite from '../../assets/chat/call_invite.png';
 import mute from '../../assets/chat/mute.png';
 import unmute from '../../assets/chat/unmute.png';
 import tick from '../../assets/chat/tick.png';
-import { getUserList, inviteUserJoinRoom } from '@/services/api';
+import { getUserList, inviteUserJoinRoom, noticeOnline } from '@/services/api';
 import styles from './index.less';
 
 interface IMeeting {
@@ -47,6 +47,11 @@ const Meeting: React.FC<IMeeting> = (props) => {
     isMute: true,
     role: '',
   });
+
+  useEffect(() => {
+    // 有时候会看不到在线状态
+    noticeOnline(selfUser?.user?._id).then();
+  }, [globalState.project.id]);
 
   useEffect(() => {
     const self = JSON.parse(localStorage.getItem('user') || '{}');
@@ -98,6 +103,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
       globalState.project.id,
       globalState.project.name,
     ).then(async () => {
+      noticeOnline(selfUser?.user?._id).then();
       await message.success('Message had been send');
     });
   };

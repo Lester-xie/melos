@@ -216,6 +216,24 @@ export async function noticeOffline(useId: string) {
   });
 }
 
+export async function noticeRTCStatusChange(
+  userId: string,
+  projectId: string,
+  isConnected: boolean,
+) {
+  return request('project/action/create', {
+    method: 'POST',
+    data: {
+      event: 'rtcStatusChange',
+      extraBody: {
+        userId,
+        projectId,
+        isConnected,
+      },
+    },
+  });
+}
+
 // 通知成员发生了变化
 export async function noticeMemberChanged(projectId: string) {
   return request('project/action/create', {
@@ -259,7 +277,13 @@ export async function getAllOnlineUser() {
 }
 
 // 发送消息
-export async function sendMsg(id:string|number,projectId:string,userId:string,content:string,name:string) {
+export async function sendMsg(
+  id: string | number,
+  projectId: string,
+  userId: string,
+  content: string,
+  name: string,
+) {
   return request('project/action/create', {
     method: 'POST',
     data: {

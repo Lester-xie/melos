@@ -10,6 +10,7 @@ import {
   getMemberList,
   inviteProjectUser,
   noticeMemberChanged,
+  noticeRTCStatusChange,
   updateMemberRole,
 } from '@/services/api';
 const { TabPane } = Tabs;
@@ -38,7 +39,7 @@ const CustomTab = () => {
         const uid = str.substring(9);
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (uid === user.id) {
-          RTCRef.current.closeSocket();
+          RTCRef.current?.closeSocket();
           RTCRef.current = null;
           dispatch({
             type: 'global/save',
@@ -140,7 +141,7 @@ const CustomTab = () => {
       const userId = extra.userId;
       if (userId === user.id) {
         message.warn('Your have leave this room').then();
-        RTCRef.current.closeSocket();
+        RTCRef.current?.closeSocket();
       }
       const onlineMembers = [...onMeetingUserRef.current].filter(
         (u) => u !== userId,
@@ -170,9 +171,9 @@ const CustomTab = () => {
       return;
     }
     if (bol) {
-      RTCRef.current.streamEvents[streamId].stream.mute('audio');
+      RTCRef.current?.streamEvents[streamId].stream.mute('audio');
     } else {
-      RTCRef.current.streamEvents[streamId].stream.unmute('audio');
+      RTCRef.current?.streamEvents[streamId].stream.unmute('audio');
     }
   };
 
@@ -291,9 +292,10 @@ const CustomTab = () => {
     dispatch({
       type: 'global/save',
       payload: {
-        onlineMemberIds: [user.id],
+        onlineMemberIds: globalState.onlineMemberIds.concat(user.id),
       },
     });
+    noticeRTCStatusChange(user.id, globalState.project.id, false).then();
   };
 
   const onRoleChange = (mId: string, e: string) => {
@@ -338,10 +340,13 @@ const CustomTab = () => {
       type: 'global/save',
       payload: {
         muteMembersIds: [],
-        onlineMemberIds: [],
+        onlineMemberIds: globalState.onlineMemberIds.filter(
+          (m) => m !== user.id,
+        ),
         roomId: '',
       },
     });
+    noticeRTCStatusChange(user.id, globalState.project.id, true).then();
   };
 
   const tickMemberOutRoom = (userId: string) => {
@@ -354,7 +359,8 @@ const CustomTab = () => {
     // RTCRef.current.deletePeer(userId);
     // RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'ended');
     // RTCRef.current.disconnectWith( userId )
-    RTCRef.current.send(`tickTick#${userId}`);
+    RTCRef.current?.send(`tickTick#${userId}`);
+    noticeRTCStatusChange(userId, globalState.project.id, true).then();
   };
 
   useEffect(() => {
