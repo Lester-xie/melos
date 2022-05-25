@@ -181,6 +181,7 @@ const CustomTab = () => {
     const res = await inviteProjectUser(userId, globalState.project.id);
     if (res.code === 0) {
       message.success('invited success');
+      noticeMemberChanged(globalState.project.id).then();
       getMemberList(globalState.project.id).then((res) => {
         dispatch({
           type: 'global/save',
@@ -299,6 +300,7 @@ const CustomTab = () => {
     updateMemberRole(mId, e).then((res) => {
       if (res.code === 0) {
         message.success('Update role success').then();
+        noticeMemberChanged(globalState.project.id).then();
         getMemberList(globalState.project.id).then((c) => {
           if (c.code === 0) {
             dispatch({
@@ -358,8 +360,8 @@ const CustomTab = () => {
   useEffect(() => {
     if (globalState.roomId) {
       goCreateOrJoinRoom();
-    }else{
-      RTCRef.current =null
+    } else {
+      RTCRef.current = null;
     }
   }, [globalState.roomId]);
   return (

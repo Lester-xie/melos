@@ -6,7 +6,7 @@ import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
 import { message, Spin, Modal } from 'antd';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, throttle } from 'lodash';
 import styles from './index.less';
 import {
   PlusOutlined,
@@ -63,6 +63,8 @@ const Workspace = ({
     revocationList,
     userInfo,
   } = global;
+
+  const recordRef =  useRef<API.messageRecord[]>([])
 
   const onFileSelect = (file: any) => {
     setIsNoneState(false);
@@ -142,15 +144,18 @@ const Workspace = ({
       );
     }
   };
-
-  const reloadPlayer = useCallback(() => {
-    playContext.load(currentTracks).then(() => {
-      currentTracks.forEach((item: any, index: number) => {
-        handleInit(item, index);
+  // 太卡了
+  const reloadPlayer = useCallback(
+    throttle(() => {
+      playContext.load(currentTracks).then(() => {
+        currentTracks.forEach((item: any, index: number) => {
+          handleInit(item, index);
+        });
+        setTrackList([...playContext.tracks]);
       });
-      setTrackList([...playContext.tracks]);
-    });
-  }, [currentTracks, playContext]);
+    }, 5000),
+    [currentTracks, playContext],
+  );
 
   useEffect(() => {
     if (trackList.length === 0 && currentTracks.length > 0) {
@@ -491,6 +496,33 @@ const Workspace = ({
     },
     [currentTracks, playContext],
   );
+  const receiveMsgCallback = useCallback(
+    (event: any) => {
+      const { id, content, projectId, userId, name } = event.extraBody;
+      // 排除自己
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+      if (userId === user.id) return;
+      // 自己是不是在这个项目中
+      if (projectId !== global.project.id) return;
+
+      // 更新chatRecord列表
+      dispatch?.({
+        type: 'global/save',
+        payload: {
+          chatRecord: [
+            ...recordRef.current,
+            { id, content, isSelf: false, userId, name },
+          ],
+        },
+      });
+    },
+    [recordRef,global.project],
+  );
+  useEffect(()=>{
+    recordRef.current= global.chatRecord
+  },[global.chatRecord])
+
 
   useEffect(() => {
     if (token) {
@@ -536,23 +568,8 @@ const Workspace = ({
           return;
         }
         if (arg.event === 'sendMessage') {
-          console.log(arg);
-          const { id, content, projectId, userId, name } = arg.extraBody;
-          // 排除自己
-          const user = JSON.parse(localStorage.getItem('user') || '{}');
-          if (userId === user.id) return;
-          // 自己是不是在这个项目中
-          if (projectId !== global.project.id) return;
-          // 更新chatRecord列表
-          dispatch?.({
-            type: 'global/save',
-            payload: {
-              chatRecord: [
-                ...global.chatRecord,
-                { id, content, isSelf: false, userId, name },
-              ],
-            },
-          });
+          console.log(arg.extraBody)
+          receiveMsgCallback(arg)
           return;
         }
         if (arg.event === 'memberChanged') {
