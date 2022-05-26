@@ -799,6 +799,12 @@ const Workspace = ({
           payload: { socketConnectSuccess: true },
         });
       });
+      socket.on('disconnect', () => {
+        dispatch?.({
+          type: 'global/save',
+          payload: { socketConnectSuccess: false },
+        });
+      });
     }
   }, [socket, playContext, global, trackList, currentProject, currentTracks]);
 

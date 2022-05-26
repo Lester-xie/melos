@@ -159,7 +159,6 @@ export default function Resource(props: Props) {
             {searchResultList.map((item: any) => (
               <li key={item.name} onClick={() => onItemClicked(item)}>
                 <div>{item.name}</div>
-                <div>{item.time}</div>
               </li>
             ))}
           </ul>
