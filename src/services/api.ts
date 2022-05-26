@@ -46,11 +46,17 @@ export async function createAsset(token: string, userId: string, name: string) {
   });
 }
 
+const USERID = '627dd3a6e4591fd54c1a4888';
+
 export async function fetchTagList() {
   return request(`label/search`, {
     method: 'POST',
     data: {
-      conds: {},
+      conds: {
+        user: USERID,
+      },
+      page: 1,
+      limit: 100,
     },
   });
 }
@@ -175,6 +181,20 @@ export async function fetchUploadList(userId: string) {
       conds: {
         user: userId,
       },
+    },
+  });
+}
+
+// 获取项目已上传资源
+export async function fetchAssetByTag(tagId: string) {
+  return request(`asset/search`, {
+    method: 'POST',
+    data: {
+      conds: {
+        user: USERID,
+        label: tagId,
+      },
+      limit: 100,
     },
   });
 }

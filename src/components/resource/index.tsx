@@ -1,16 +1,16 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import Collapse from '../collapse';
 import Tag from '../tag';
 import styles from './index.less';
 import {
   createAsset,
+  fetchAssetByTag,
   fetchPresigned,
-  uploadAudio,
   fetchTagList,
   fetchUploadList,
+  uploadAudio,
 } from '@/services/api';
-import useAsync from '@/hooks/useAsync';
 import { cloneDeep } from 'lodash';
 import { Spin } from 'antd';
 import { useSelector } from 'umi';
@@ -23,24 +23,6 @@ interface Props {
   onClose: () => void;
   onSelect: (file: any) => void;
 }
-
-const useTags = () => {
-  const { execute, data } = useAsync(
-    useCallback(async () => {
-      const result = await fetchTagList();
-      if (result.code === 0) {
-        return result.data.result;
-      }
-      return [];
-    }, []),
-  );
-
-  useEffect(() => execute(), [execute]);
-
-  return {
-    list: data,
-  };
-};
 
 function formatTime(time: string) {
   const date = new Date(time);
@@ -59,67 +41,12 @@ function addZero(number: number) {
 export default function Resource(props: Props) {
   const [tab, setTab] = useState<Tab>('local');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [tagList, setTagList] = useState([
-    {
-      id: 0,
-      text: 'Vocals',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/Vocals30.mp3',
-      name: 'Vocals30.mp3',
-      time: '2022-05-05 12:43',
-      active: false,
-    },
-    {
-      id: 1,
-      text: 'Piano',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/PianoSynth30.mp3',
-      name: 'PianoSynth30.mp3',
-      time: '2022-05-06 17:10',
-      active: false,
-    },
-    {
-      id: 2,
-      text: 'Bass',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/BassDrums30.mp3',
-      name: 'BassDrums30.mp3',
-      time: '2022-05-07 12:13',
-      active: false,
-    },
-    {
-      id: 3,
-      text: 'Hop',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/Vocals30.mp3',
-      name: '329.mp3',
-      time: '2022-05-05 14:31',
-      active: false,
-    },
-    {
-      id: 4,
-      text: 'Trip',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/PianoSynth30.mp3',
-      name: '305.mp3',
-      time: '2022-05-06 17:18',
-      active: false,
-    },
-    {
-      id: 5,
-      text: 'Pop',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/BassDrums30.mp3',
-      name: '318.mp3',
-      time: '2022-05-06 19:01',
-      active: false,
-    },
-    {
-      id: 6,
-      text: 'Grunge',
-      src: 'https://naomiaro.github.io/waveform-playlist/media/audio/BassDrums30.mp3',
-      name: '054.mp3',
-      time: '2022-05-06 12:10',
-      active: false,
-    },
-  ]);
+  const [tagList1, setTagList1] = useState<any[]>([]);
   const [searchResultList, setSearchResultList] = useState<any>([]);
   const [loading, setLoading] = useState(false);
   const [historyList, setHistoryList] = useState([]);
+  const [assetData, setAssetData] = useState<any>({});
+  const [activeTags, setActiveTags] = useState<any[]>([]);
 
   // @ts-ignore
   const userInfo: UserInfo = useSelector((state) => state.global.userInfo);
@@ -134,7 +61,33 @@ export default function Resource(props: Props) {
     }
   }, [tab, userInfo]);
 
-  // const { tagList } = useTags()
+  useEffect(() => {
+    fetchTagList().then((result) => {
+      if (result.code === 0) {
+        const data = result.data.result;
+        const filterData = data.filter(
+          (item: any) => item?.parent === undefined,
+        );
+        const addActiveData = filterData.map((item: any) => {
+          item.children = item.children.map((i: any) => {
+            i.active = false;
+            return i;
+          });
+          return item;
+        });
+        setTagList1(addActiveData);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    let resultList: any[] = [];
+    activeTags.forEach((item: string) => {
+      resultList = resultList.concat(assetData[item]);
+    });
+    setSearchResultList(resultList);
+  }, [activeTags]);
+
   const onCloseBtnClicked = useCallback(() => {
     props.onClose();
   }, [props.onClose]);
@@ -143,27 +96,31 @@ export default function Resource(props: Props) {
     return null;
   }
 
-  const onTagClicked = (index: number) => {
-    const list = cloneDeep(tagList);
-    list[index].active = !list[index].active;
-    const sourceList: any = [];
-    list.forEach((item: any) => {
-      if (item.active) {
-        sourceList.push({
-          name: item.name,
-          time: item.time,
-          src: item.src,
-        });
+  const onTagClicked = async (index: number, i: number) => {
+    const list = cloneDeep(tagList1);
+    const tags = cloneDeep(activeTags);
+    list[index].children[i].active = !list[index].children[i].active;
+    setTagList1([...list]);
+    const tagId = list[index].children[i]._id;
+    if (list[index].children[i].active) {
+      tags.push(tagId);
+      const res: any = await fetchAssetByTag(tagId);
+      if (res.code === 0) {
+        assetData[tagId] = res.data.result;
       }
-    });
-    setSearchResultList([...sourceList]);
-    setTagList([...list]);
+      setActiveTags([...tags]);
+    } else {
+      const findIndex = tags.findIndex((item: string) => item === tagId);
+      tags.splice(findIndex, 1);
+      setActiveTags([...tags]);
+    }
   };
 
   const onItemClicked = (item: any) => {
     props.onSelect({
-      src: item.src,
+      src: item.url,
       name: item.name,
+      assetId: item._id,
     });
   };
 
@@ -178,52 +135,24 @@ export default function Resource(props: Props) {
   const renderCloud = () => {
     return (
       <div className={styles.cloudWrap}>
-        <div className={styles.searchWrap}>
-          <input type="text" placeholder="Search" />
-          <img src={require('@/assets/workshop/search.png')} alt="search" />
-        </div>
-        <Collapse label="Input sources" collapse={true}>
-          <div>
-            {tagList.slice(0, 3).map((tag) => {
-              return (
+        {/*<div className={styles.searchWrap}>*/}
+        {/*  <input type="text" placeholder="Search" />*/}
+        {/*  <img src={require('@/assets/workshop/search.png')} alt="search" />*/}
+        {/*</div>*/}
+        {tagList1.map((item: any, index: number) => (
+          <Collapse label={item.name} collapse={index === 0} key={item._id}>
+            <div>
+              {item.children.map((tag: any, i: number) => (
                 <Tag
-                  text={tag.text}
+                  text={tag.name}
                   active={tag.active}
-                  onClick={() => onTagClicked(tag.id)}
-                  key={tag.id}
+                  onClick={() => onTagClicked(index, i)}
+                  key={tag._id}
                 />
-              );
-            })}
-          </div>
-        </Collapse>
-        <Collapse label="Fx Types">
-          <div>
-            {tagList.slice(3, 6).map((tag) => {
-              return (
-                <Tag
-                  text={tag.text}
-                  active={tag.active}
-                  onClick={() => onTagClicked(tag.id)}
-                  key={tag.id}
-                />
-              );
-            })}
-          </div>
-        </Collapse>
-        <Collapse label="characters">
-          <div>
-            {tagList.slice(6).map((tag) => {
-              return (
-                <Tag
-                  text={tag.text}
-                  active={tag.active}
-                  onClick={() => onTagClicked(tag.id)}
-                  key={tag.id}
-                />
-              );
-            })}
-          </div>
-        </Collapse>
+              ))}
+            </div>
+          </Collapse>
+        ))}
         <div className={styles.resultWrap}>
           <div className={styles.title}>Result</div>
           <ul className={styles.resultList}>
