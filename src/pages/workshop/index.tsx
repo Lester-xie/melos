@@ -104,10 +104,10 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
               Lester
             </button>
             <button
-              className={activeUser === 'David' ? styles.active : null}
-              onClick={() => onBtnClicked('David')}
+              className={activeUser === 'Jerry' ? styles.active : null}
+              onClick={() => onBtnClicked('Jerry')}
             >
-              David
+              Jerry
             </button>
             {socketConnectSuccess ? (
               <span className={styles.successful} />
