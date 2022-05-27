@@ -46,15 +46,13 @@ export async function createAsset(token: string, userId: string, name: string) {
   });
 }
 
-const USERID = '627dd3a6e4591fd54c1a4888';
+const USERID = '62902140e0346b371d1a6416';
 
 export async function fetchTagList() {
   return request(`label/search`, {
     method: 'POST',
     data: {
-      conds: {
-        user: USERID,
-      },
+      conds: {},
       page: 1,
       limit: 100,
     },
@@ -191,7 +189,6 @@ export async function fetchAssetByTag(tagId: string) {
     method: 'POST',
     data: {
       conds: {
-        user: USERID,
         label: tagId,
       },
       limit: 100,
