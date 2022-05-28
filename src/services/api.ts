@@ -1,6 +1,7 @@
 import { request } from 'umi';
 import { debounce } from 'lodash';
 import { TrackInfo } from '@/models/global';
+import { notification } from 'antd';
 
 /** login */
 export async function Login(name: string) {
@@ -67,6 +68,14 @@ export async function getMemberList(projectId: string) {
       page: 1,
       limit: 50,
     },
+  }).catch((e) => {
+    if (e?.data?.code === 51005400) {
+      // 被 T出了项目
+      setTimeout(() => {
+        // 3秒后 刷新
+        window.location.href = window.location.href + '';
+      }, 3000);
+    }
   });
 }
 
@@ -233,10 +242,38 @@ export async function noticeOffline(useId: string) {
   });
 }
 
+// 通知成员发生了变化
+export async function noticeMemberChanged(projectId: string) {
+  return request('project/action/create', {
+    method: 'POST',
+    data: {
+      event: 'memberChanged',
+      extraBody: {
+        projectId,
+      },
+    },
+  });
+}
+
+// 请求语音状态的同步
+export async function noticeRTCStatusSync(projectId: string) {
+  return request('project/action/create', {
+    method: 'POST',
+    data: {
+      event: 'rtcStatusSync',
+      extraBody: {
+        projectId,
+      },
+    },
+  });
+}
+
+// 通知房间成员 语音状态发生了改变
 export async function noticeRTCStatusChange(
   userId: string,
   projectId: string,
   isConnected: boolean,
+  isMute: boolean,
 ) {
   return request('project/action/create', {
     method: 'POST',
@@ -246,19 +283,7 @@ export async function noticeRTCStatusChange(
         userId,
         projectId,
         isConnected,
-      },
-    },
-  });
-}
-
-// 通知成员发生了变化
-export async function noticeMemberChanged(projectId: string) {
-  return request('project/action/create', {
-    method: 'POST',
-    data: {
-      event: 'memberChanged',
-      extraBody: {
-        projectId,
+        isMute,
       },
     },
   });

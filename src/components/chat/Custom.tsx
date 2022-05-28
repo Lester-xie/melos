@@ -44,8 +44,12 @@ const CustomTab = () => {
           dispatch({
             type: 'global/save',
             payload: {
-              muteMembersIds: [],
-              onlineMemberIds: [],
+              muteMembersIds: [...onMuteIdsRef.current].filter(
+                (id) => id !== uid,
+              ),
+              onlineMemberIds: [...onMeetingUserRef.current].filter(
+                (id) => id !== uid,
+              ),
               roomId: '',
             },
           });
@@ -157,7 +161,7 @@ const CustomTab = () => {
         },
       });
     },
-    [onMeetingUserRef],
+    [onMeetingUserRef, globalState],
   );
 
   const toggleMute = (bol: boolean, userId: string = '') => {
@@ -175,6 +179,12 @@ const CustomTab = () => {
     } else {
       RTCRef.current?.streamEvents[streamId].stream.unmute('audio');
     }
+    noticeRTCStatusChange(
+      user.id,
+      globalState.project.id,
+      !!globalState.roomId,
+      bol,
+    ).then();
   };
 
   // inviteMember
@@ -183,13 +193,10 @@ const CustomTab = () => {
     if (res.code === 0) {
       message.success('invited success');
       noticeMemberChanged(globalState.project.id).then();
-      getMemberList(globalState.project.id).then((res) => {
-        dispatch({
-          type: 'global/save',
-          payload: {
-            memberList: res.data.result,
-          },
-        });
+      // dva effect
+      dispatch({
+        type: 'global/updateMemberList',
+        payload: globalState.project.id,
       });
     }
   };
@@ -201,15 +208,10 @@ const CustomTab = () => {
         // 删除项目成员成功
         //  1.更新memberList 列表
         if (res.code === 0) {
-          getMemberList(globalState.project.id).then((c) => {
-            if (c.code === 0) {
-              dispatch({
-                type: 'global/save',
-                payload: {
-                  memberList: c.data.result,
-                },
-              });
-            }
+          // dva effect
+          dispatch({
+            type: 'global/updateMemberList',
+            payload: globalState.project.id,
           });
         }
         noticeMemberChanged(globalState.project.id).then();
@@ -289,13 +291,14 @@ const CustomTab = () => {
 
     RTCRef.current.openOrJoin(globalState.roomId);
     message.success('Join Room success').then();
+
     dispatch({
       type: 'global/save',
       payload: {
         onlineMemberIds: globalState.onlineMemberIds.concat(user.id),
       },
     });
-    noticeRTCStatusChange(user.id, globalState.project.id, false).then();
+    noticeRTCStatusChange(user.id, globalState.project.id, true, false).then();
   };
 
   const onRoleChange = (mId: string, e: string) => {
@@ -303,16 +306,6 @@ const CustomTab = () => {
       if (res.code === 0) {
         message.success('Update role success').then();
         noticeMemberChanged(globalState.project.id).then();
-        getMemberList(globalState.project.id).then((c) => {
-          if (c.code === 0) {
-            dispatch({
-              type: 'global/save',
-              payload: {
-                memberList: c.data.result,
-              },
-            });
-          }
-        });
       }
     });
   };
@@ -339,14 +332,14 @@ const CustomTab = () => {
     dispatch({
       type: 'global/save',
       payload: {
-        muteMembersIds: [],
+        muteMembersIds: [...onMuteIdsRef.current],
         onlineMemberIds: globalState.onlineMemberIds.filter(
           (m) => m !== user.id,
         ),
         roomId: '',
       },
     });
-    noticeRTCStatusChange(user.id, globalState.project.id, true).then();
+    noticeRTCStatusChange(user.id, globalState.project.id, false, false).then();
   };
 
   const tickMemberOutRoom = (userId: string) => {
@@ -360,13 +353,16 @@ const CustomTab = () => {
     // RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'ended');
     // RTCRef.current.disconnectWith( userId )
     RTCRef.current?.send(`tickTick#${userId}`);
-    noticeRTCStatusChange(userId, globalState.project.id, true).then();
+    noticeRTCStatusChange(userId, globalState.project.id, false, false).then();
   };
 
   useEffect(() => {
     if (globalState.roomId) {
       goCreateOrJoinRoom();
     } else {
+      try {
+        RTCRef.current?.closeSocket();
+      } catch (_) {}
       RTCRef.current = null;
     }
   }, [globalState.roomId]);

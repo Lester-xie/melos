@@ -19,22 +19,9 @@ export default function Chat() {
 
   useEffect(() => {
     if (globalState.project.id) {
-      getMemberList(globalState.project.id).then((res) => {
-        if (res.code === 0 && dispatch) {
-          const onlineUser = res.data.result.filter(
-            (m: API.MemberType) => m.isOnline,
-          );
-          const onlineUserIds = onlineUser.map(
-            (m: API.MemberType) => m.user._id,
-          );
-          dispatch({
-            type: 'global/save',
-            payload: {
-              memberList: res.data.result,
-              socketOnlineUserIds: onlineUserIds,
-            },
-          });
-        }
+      dispatch({
+        type: 'global/updateMemberList',
+        payload: globalState.project.id,
       });
     }
   }, [globalState.project]);

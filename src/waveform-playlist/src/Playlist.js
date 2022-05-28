@@ -961,6 +961,7 @@ export default class {
         name: track.name,
       },
     ];
+    const trackId = track._id;
     const loadPromises = trackList.map((trackInfo) => {
       const loader = LoaderFactory.createLoader(
         trackInfo.src,
@@ -1009,7 +1010,7 @@ export default class {
           const track = new Track();
           track.src = info.src;
           track.setBuffer(audioBuffer);
-          track.setId(new Date().getTime());
+          track.setId(trackId);
           track.setName(name);
           track.setEventEmitter(this.ee);
           track.setEnabledStates(states);
@@ -1059,7 +1060,19 @@ export default class {
         });
 
         this.tracks.splice(trackIndex, 1, tracks[0]);
-
+        let removeMuteIndex = this.mutedTracks.findIndex(
+          (item) => item._id === trackId,
+        );
+        if (removeMuteIndex > -1) {
+          this.mutedTracks.splice(removeMuteIndex, 1);
+        }
+        let removeSoloIndex = this.soloedTracks.findIndex(
+          (item) => item._id === trackId,
+        );
+        if (removeSoloIndex > -1) {
+          this.soloedTracks.splice(removeSoloIndex, 1);
+        }
+        this.stop();
         this.adjustDuration();
         this.draw(this.render());
 
@@ -1218,6 +1231,12 @@ export default class {
     } else {
       this.mutedTracks.push(track);
     }
+    let removeIndex = this.soloedTracks.findIndex(
+      (item) => item._id === track._id,
+    );
+    if (removeIndex > -1) {
+      this.soloedTracks.splice(removeIndex, 1);
+    }
   }
 
   soloTrack(track) {
@@ -1228,6 +1247,12 @@ export default class {
       this.soloedTracks = [track];
     } else {
       this.soloedTracks.push(track);
+    }
+    let removeIndex = this.mutedTracks.findIndex(
+      (item) => item._id === track._id,
+    );
+    if (removeIndex > -1) {
+      this.mutedTracks.splice(removeIndex, 1);
     }
   }
 

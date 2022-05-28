@@ -166,23 +166,31 @@ export default function TrackItem({
   const onMuteToggle = useCallback(() => {
     trackItem.ee.emit('mute', trackItem, (isInMutedTrack: boolean) => {
       setMuted(isInMutedTrack);
+      if (isInMutedTrack) {
+        setSolo(false);
+      }
       dispatch({
         type: 'global/updateRow',
         attr: 'mute',
         index,
         mute: isInMutedTrack,
+        solo: false,
       });
       debouncePushAction(currentProject.id, 'changeMute', { index });
     });
-  }, [trackItem, muted]);
+  }, [trackItem, muted, solo]);
 
   const onSoloToggle = useCallback(() => {
     trackItem.ee.emit('solo', trackItem, (isInSoloedTrack: boolean) => {
       setSolo(isInSoloedTrack);
+      if (isInSoloedTrack) {
+        setMuted(false);
+      }
       dispatch({
         type: 'global/updateRow',
         attr: 'solo',
         index,
+        mute: false,
         solo: isInSoloedTrack,
       });
       debouncePushAction(currentProject.id, 'changeSolo', { index });

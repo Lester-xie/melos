@@ -1,10 +1,10 @@
 import styles from './index.less';
 import { FC, useEffect, useRef, useState } from 'react';
-import {Input } from 'antd';
-import {useDispatch, useSelector} from 'umi';
-import {generateId} from "@/components/chat/Custom";
-import {sendMsg} from "@/services/api";
-import {GlobalModelState} from "@/models/global";
+import { Input } from 'antd';
+import { useDispatch, useSelector } from 'umi';
+import { generateId } from '@/components/chat/Custom';
+import { sendMsg } from '@/services/api';
+import { GlobalModelState } from '@/models/global';
 
 const Message: FC = () => {
   const self = JSON.parse(localStorage.getItem('user') || '{}');
@@ -13,27 +13,33 @@ const Message: FC = () => {
   const globalState: GlobalModelState = useSelector(
     (state: any) => state.global,
   );
-  const {project,chatRecord} = globalState
+  const { project, chatRecord } = globalState;
   const dispatch = useDispatch();
 
   // 按下enter键
   const onPressEnter = async (e: any) => {
     const value = e.target.value;
 
-    if (value) {
+    if (value && value.trim()) {
       // 1.发送消息--->调用成功
-      const id = generateId()
-      await sendMsg(id,project.id,self.id,value,self.name)
+      const id = generateId();
+      await sendMsg(id, project.id, self.id, value, self.name);
       // 2.存储发送内容
-      const item =  { id, content: value, isSelf: true, userId: self.id,name:self.name}
+      const item = {
+        id,
+        content: value,
+        isSelf: true,
+        userId: self.id,
+        name: self.name,
+      };
       dispatch({
         type: 'global/save',
         payload: {
-          chatRecord: [...chatRecord,item],
+          chatRecord: [...chatRecord, item],
         },
       });
       // 3.清空输入框的值
-     setInputValue('');
+      setInputValue('');
     }
   };
 

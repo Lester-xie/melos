@@ -26,6 +26,7 @@ declare namespace API {
       avatar: {
         url: string;
       };
+      isOnline?: boolean;
     };
     role: 'admin' | 'guest' | 'editor';
     isMute?: boolean;

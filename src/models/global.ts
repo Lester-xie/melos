@@ -1,5 +1,5 @@
 import { Effect, Reducer, Subscription } from 'umi';
-import { updateProject } from '@/services/api';
+import { getMemberList, updateProject } from '@/services/api';
 import { cloneDeep } from 'lodash';
 
 export interface UserInfo {
@@ -60,6 +60,7 @@ export interface GlobalModelType {
   state: GlobalModelState;
   effects: {
     query: Effect;
+    updateMemberList: Effect;
   };
   reducers: {
     save: Reducer<GlobalModelState>;
@@ -95,6 +96,22 @@ const GlobalModel: GlobalModelType = {
 
   effects: {
     *query({ payload }, { call, put }) {},
+    *updateMemberList({ payload }, { call, put }) {
+      const res = yield call(getMemberList, payload);
+      if (res.code === 0) {
+        const onlineUser = res.data.result.filter(
+          (m: API.MemberType) => m.isOnline || m.user.isOnline,
+        );
+        const onlineUserIds = onlineUser.map((m: API.MemberType) => m.user._id);
+        yield put({
+          type: 'global/save',
+          payload: {
+            memberList: res.data.result,
+            socketOnlineUserIds: onlineUserIds,
+          },
+        });
+      }
+    },
   },
   reducers: {
     save(state, action) {
@@ -156,10 +173,12 @@ const GlobalModel: GlobalModelType = {
         }
         case 'mute': {
           trackList[action.index].mute = action.mute;
+          trackList[action.index].solo = action.solo;
           break;
         }
         case 'solo': {
           trackList[action.index].solo = action.solo;
+          trackList[action.index].mute = action.mute;
           break;
         }
         case 'gain': {

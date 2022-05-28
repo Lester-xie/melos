@@ -7,7 +7,12 @@ import call_invite from '../../assets/chat/call_invite.png';
 import mute from '../../assets/chat/mute.png';
 import unmute from '../../assets/chat/unmute.png';
 import tick from '../../assets/chat/tick.png';
-import { getUserList, inviteUserJoinRoom, noticeOnline } from '@/services/api';
+import {
+  getUserList,
+  inviteUserJoinRoom,
+  noticeOnline,
+  noticeRTCStatusSync,
+} from '@/services/api';
 import styles from './index.less';
 
 interface IMeeting {
@@ -51,6 +56,8 @@ const Meeting: React.FC<IMeeting> = (props) => {
   useEffect(() => {
     // 有时候会看不到在线状态
     noticeOnline(selfUser?.user?._id).then();
+    // 通知别人发送他的语音状态过来
+    noticeRTCStatusSync(globalState.project.id).then();
   }, [globalState.project.id]);
 
   useEffect(() => {
@@ -286,9 +293,9 @@ const Meeting: React.FC<IMeeting> = (props) => {
                           onRoleChangeFun(m._id, e)
                         }
                       >
-                        {selfUser.role === 'admin' && (
-                          <Option value="admin">admin</Option>
-                        )}
+                        {/*{selfUser.role === 'admin' && (*/}
+                        {/*  <Option value="admin">admin</Option>*/}
+                        {/*)}*/}
                         <Option value="editor">editor</Option>
                         <Option value="guest">guest</Option>
                       </Select>

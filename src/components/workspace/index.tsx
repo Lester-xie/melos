@@ -5,7 +5,7 @@ import EventEmitter from 'events';
 import WaveformPlaylist from '../../waveform-playlist/src/app.js';
 import * as Tone from 'tone';
 import { saveAs } from 'file-saver';
-import { message, Spin, Modal } from 'antd';
+import { message, Spin } from 'antd';
 import { cloneDeep, throttle } from 'lodash';
 import styles from './index.less';
 import {
@@ -18,7 +18,7 @@ import Resource from '@/components/resource';
 import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
 import { connect } from 'umi';
-import { debouncePushAction, getMemberList } from '@/services/api';
+import { debouncePushAction, noticeRTCStatusChange } from '@/services/api';
 import { GlobalModelState, isInitTrack } from '@/models/global';
 import { ConnectProps } from '@@/plugin-dva/connect';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -65,33 +65,41 @@ const Workspace = ({
   } = global;
 
   const recordRef = useRef<API.messageRecord[]>([]);
+  const resourceWrapRef = useRef(null);
 
   const onFileSelect = (file: any) => {
     setIsNoneState(false);
-    playContext.load([file]).then(() => {
-      setTrackList([...playContext.tracks]);
-      dispatch?.({
-        type: 'global/update',
-        payload: {
-          currentTracks: [
-            ...currentTracks,
-            {
-              src: file.src,
-              name: file.name,
-              mute: false,
-              solo: false,
-              gain: 1,
-              stereoPan: 0,
-              copy: null,
-              cut: null,
-              startTime: 0,
-              assetId: file.assetId,
-              userId: userInfo?.id,
-            },
-          ],
-        },
+    playContext
+      .load([file])
+      .then(() => {
+        setTrackList([...playContext.tracks]);
+        dispatch?.({
+          type: 'global/update',
+          payload: {
+            currentTracks: [
+              ...currentTracks,
+              {
+                src: file.src,
+                name: file.name,
+                mute: false,
+                solo: false,
+                gain: 1,
+                stereoPan: 0,
+                copy: null,
+                cut: null,
+                startTime: 0,
+                assetId: file.assetId,
+                userId: userInfo?.id,
+              },
+            ],
+          },
+        });
+      })
+      .then(() => {
+        // @ts-ignore
+        resourceWrapRef.current.scrollTop =
+          resourceWrapRef.current.scrollHeight;
       });
-    });
     file.userId = userInfo?.id;
     debouncePushAction(currentProject.id, 'addTrack', file);
   };
@@ -574,16 +582,12 @@ const Workspace = ({
         if (arg.event === 'memberChanged') {
           const { projectId } = arg.extraBody;
           if (projectId === global.project.id) {
-            getMemberList(projectId).then((c) => {
-              if (c.code === 0) {
-                dispatch?.({
-                  type: 'global/save',
-                  payload: {
-                    memberList: c.data.result,
-                  },
-                });
-              }
+            // dva effect
+            dispatch?.({
+              type: 'global/updateMemberList',
+              payload: projectId,
             });
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
           }
           return;
         }
@@ -599,28 +603,50 @@ const Workspace = ({
           openNotification(projectId, projectName);
           return;
         }
-        if (arg.event === 'rtcStatusChange') {
-          const { isConnected, userId, projectId } = arg.extraBody;
+        if (arg.event === 'rtcStatusSync') {
+          const { projectId } = arg.extraBody;
           if (projectId !== global.project.id) {
             return;
           }
-          const set = new Set(global.onlineMemberIds);
-          if (isConnected) {
-            set.delete(userId);
+          const user = JSON.parse(localStorage.getItem('user') || '{}');
+          noticeRTCStatusChange(
+            user.id,
+            projectId,
+            !!global.roomId,
+            global.muteMembersIds.includes(user.id),
+          ).then();
+        }
 
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
-            if (userId === user.id) {
-              dispatch?.({
-                type: 'global/save',
-                payload: { roomId: '' },
-              });
-            }
-          } else {
-            set.add(userId);
+        if (arg.event === 'rtcStatusChange') {
+          const { isConnected, isMute, userId, projectId } = arg.extraBody;
+          if (projectId !== global.project.id) {
+            return;
           }
+          const memberSet = new Set(global.onlineMemberIds);
+          const muteSet = new Set(global.muteMembersIds);
+          if (!isConnected) {
+            memberSet.delete(userId);
+          } else {
+            memberSet.add(userId);
+          }
+
+          if (isMute) {
+            muteSet.add(userId);
+          } else {
+            muteSet.delete(userId);
+          }
+
           dispatch?.({
             type: 'global/save',
-            payload: { onlineMemberIds: Array.from(set) },
+            payload: {
+              roomId:
+                !isConnected &&
+                JSON.parse(localStorage.getItem('user') || '{}').id === userId
+                  ? ''
+                  : global.roomId,
+              onlineMemberIds: Array.from(memberSet),
+              muteMembersIds: Array.from(muteSet),
+            },
           });
         }
 
@@ -672,6 +698,7 @@ const Workspace = ({
               // solo 切换
               case 'changeSolo': {
                 ee.emit('solo', playContext.tracks[data.index]);
+                setTrackList([...cloneDeep(playContext.tracks)]);
                 break;
               }
               // 更改项目名称
@@ -753,6 +780,7 @@ const Workspace = ({
                   'auto',
                   () => {
                     setTrackList([...playContext.tracks]);
+                    ee.emit('stop');
                   },
                 );
                 break;
@@ -887,7 +915,7 @@ const Workspace = ({
           </div>
         </div>
       </div>
-      <div className={styles.resourceWrap}>
+      <div className={styles.resourceWrap} ref={resourceWrapRef}>
         <div>
           <Resource
             show={showResource}
