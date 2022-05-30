@@ -349,12 +349,20 @@ export default class {
         return;
       }
       const { start, end } = this.getTimeSelection();
-      if (start === end) {
+      const { startTime, endTime } = activeTrack;
+
+      if (start === end || end < startTime || start > endTime) {
+        alert('please select a valid zone.');
+        this.setTimeSelection(0, 0);
         return;
       }
+
       const sampleRate = activeTrack.buffer.sampleRate;
-      const startIdx = secondsToSamples(start, sampleRate);
-      const endIdx = secondsToSamples(end, sampleRate);
+      const startSec = (start < startTime ? startTime : start) - startTime;
+      const endSec = (end > endTime ? endTime : end) - startTime;
+
+      const startIdx = secondsToSamples(startSec, sampleRate);
+      const endIdx = secondsToSamples(endSec, sampleRate);
 
       const activeAudioBuffer = activeTrack.buffer;
 
@@ -386,6 +394,7 @@ export default class {
       this.selection;
 
       activeTrack.setBuffer(newBuffer);
+      activeTrack.startTime = start < startTime ? end : startTime;
       activeTrack.setCues(0, newBuffer.duration); //必不可少，否则频谱图不会变
       activeTrack.calculatePeaks(this.samplesPerPixel, sampleRate);
       // webaudio specific playout for now.
@@ -457,12 +466,20 @@ export default class {
       if (!track) {
         return;
       }
-      const timeSelection = this.getTimeSelection();
-      console.log(`复制的区域: ${timeSelection.start} -  ${timeSelection.end}`);
+      const { start, end } = this.getTimeSelection();
+      const { startTime, endTime } = track;
+
+      const startSec = (start < startTime ? startTime : start) - startTime;
+      const endSec = (end > endTime ? endTime : end) - startTime;
+
+      if (endSec - startSec <= 0) {
+        alert('please select a valid zone.');
+        return;
+      }
 
       this.copy = {
-        start: timeSelection.start - track.startTime,
-        end: timeSelection.end - track.startTime,
+        start: startSec, //timeSelection.start - track.startTime,
+        end: endSec, //timeSelection.end - track.startTime,
         track,
       };
     });
@@ -475,7 +492,7 @@ export default class {
       console.log('当前的track', activeTrack);
 
       // 复制的信息
-      if (!this.copy || !this.copy.start) {
+      if (!this.copy) {
         alert('your should copy first');
         return;
       }
