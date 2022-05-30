@@ -351,10 +351,10 @@ const Workspace = ({
               setRevokeLoading(true);
             }
             const cloneData = cloneDeep(
-              cloneCurrentTracks[prevAction.targetIndex][optionName],
+              cloneCurrentTracks[prevAction.currentIndex][optionName],
             );
             cloneData.pop();
-            cloneCurrentTracks[prevAction.targetIndex][optionName] = [
+            cloneCurrentTracks[prevAction.currentIndex][optionName] = [
               ...cloneData,
             ];
             dispatch?.({
@@ -370,11 +370,19 @@ const Workspace = ({
               prevAction.targetIndex,
               'auto',
               () => {
-                cloneCurrentTracks.forEach((item: any, index: number) => {
-                  if (index === prevAction.targetIndex) {
-                    handleInit(item, index);
-                  }
-                });
+                if (optionName === 'cut') {
+                  cloneCurrentTracks.forEach((item: any, index: number) => {
+                    if (index === prevAction.targetIndex) {
+                      handleInit(item, index);
+                    }
+                  });
+                } else {
+                  cloneCurrentTracks.forEach((item: any, index: number) => {
+                    if (index === prevAction.currentIndex) {
+                      handleInit(item, index);
+                    }
+                  });
+                }
                 setTrackList([...playContext.tracks]);
                 callback();
               },

@@ -10,6 +10,7 @@ export interface UserInfo {
 
 interface RevocationItem {
   name: 'shift' | 'cut' | 'copy';
+  currentIndex?: number;
   targetIndex: number;
   prevStartTime?: number;
   currentStartTime?: number;
@@ -147,7 +148,11 @@ const GlobalModel: GlobalModelType = {
               { start: action.start, end: action.end },
             ];
           }
-          revocationList.push({ name: 'cut', targetIndex: action.index });
+          revocationList.push({
+            name: 'cut',
+            targetIndex: action.index,
+            currentIndex: action.index,
+          });
           break;
         }
         case 'copy': {
@@ -170,6 +175,7 @@ const GlobalModel: GlobalModelType = {
           }
           revocationList.push({
             name: 'copy',
+            currentIndex: action.index,
             targetIndex: action.targetTrackIndex,
           });
           break;
