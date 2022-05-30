@@ -377,6 +377,8 @@ const Workspace = ({
                     }
                   });
                 } else {
+                  console.log(prevAction);
+                  console.log(cloneCurrentTracks);
                   cloneCurrentTracks.forEach((item: any, index: number) => {
                     if (index === prevAction.currentIndex) {
                       handleInit(item, index);

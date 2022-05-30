@@ -156,7 +156,7 @@ const GlobalModel: GlobalModelType = {
           break;
         }
         case 'copy': {
-          if (trackList[action.index].cut) {
+          if (trackList[action.index].copy) {
             trackList[action.index].copy.push({
               start: action.start,
               end: action.end,
