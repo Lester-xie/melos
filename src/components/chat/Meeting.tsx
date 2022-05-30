@@ -288,7 +288,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
                         defaultValue={m.role}
                         style={{ width: 120 }}
                         size="small"
-                        disabled={selfUser.role === 'guest'}
+                        disabled={selfUser.role !== 'admin'}
                         onChange={(e: 'admin' | 'editor' | 'guest') =>
                           onRoleChangeFun(m._id, e)
                         }

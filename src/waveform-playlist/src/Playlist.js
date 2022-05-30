@@ -22,7 +22,6 @@ import { cloneDeep } from 'lodash';
 export default class {
   constructor() {
     this.tracks = [];
-    this.cloneTracks = [];
     this.soloedTracks = [];
     this.mutedTracks = [];
     this.collapsedTracks = [];
@@ -119,6 +118,10 @@ export default class {
 
   setMono(mono) {
     this.mono = mono;
+  }
+
+  setAudioBuffer(audioBuffer) {
+    this.audioBuffer = audioBuffer;
   }
 
   setExclSolo(exclSolo) {
@@ -841,6 +844,94 @@ export default class {
     ee.on('reload', (track, index, type, callback) => {
       this.reload(track, index, type, callback);
     });
+
+    ee.on('resetAll', () => {
+      this.resetAll();
+    });
+  }
+
+  resetAll() {
+    this.stop();
+    const audioBuffers = this.tracks.map((item) => item.audioBuffer);
+    this.tracks = audioBuffers.map((audioBuffer, index) => {
+      return this.initTrack(this.tracks[index], audioBuffer);
+    });
+    this.adjustDuration();
+    this.draw(this.render());
+  }
+
+  initTrack(info, audioBuffer) {
+    const name = info.name || 'Untitled';
+    const start = info.start || 0;
+    const states = info.states || {};
+    const fadeIn = info.fadeIn;
+    const fadeOut = info.fadeOut;
+    const cueIn = info.cuein || 0;
+    const cueOut = info.cueout || audioBuffer.duration;
+    const gain = info.gain || 1;
+    const muted = info.muted || false;
+    const soloed = info.soloed || false;
+    const selection = info.selected;
+    const peaks = info.peaks || { type: 'WebAudio', mono: this.mono };
+    const customClass = info.customClass || undefined;
+    const waveOutlineColor = info.waveOutlineColor || undefined;
+    const stereoPan = info.stereoPan || 0;
+    const effects = info.effects || null;
+
+    // webaudio specific playout for now.
+    const playout = new Playout(this.ac, audioBuffer, this.masterGainNode);
+
+    const track = new Track();
+    track.src = info.src;
+    track.audioBuffer = audioBuffer;
+    track.setBuffer(audioBuffer);
+    track.setId(new Date().getTime());
+    track.setName(name);
+    track.setEventEmitter(this.ee);
+    track.setEnabledStates(states);
+    track.setCues(cueIn, cueOut);
+    track.setCustomClass(customClass);
+    track.setWaveOutlineColor(waveOutlineColor);
+
+    if (fadeIn !== undefined) {
+      track.setFadeIn(fadeIn.duration, fadeIn.shape);
+    }
+
+    if (fadeOut !== undefined) {
+      track.setFadeOut(fadeOut.duration, fadeOut.shape);
+    }
+
+    if (selection !== undefined) {
+      this.setActiveTrack(track);
+      this.setTimeSelection(selection.start, selection.end);
+    }
+
+    if (peaks !== undefined) {
+      track.setPeakData(peaks);
+    }
+
+    track.setState(this.getState());
+    track.setStartTime(start);
+    track.setPlayout(playout);
+
+    track.setGainLevel(gain);
+    track.setStereoPanValue(stereoPan);
+    if (effects) {
+      track.setEffects(effects);
+    }
+
+    if (muted) {
+      this.muteTrack(track);
+    }
+
+    if (soloed) {
+      this.soloTrack(track);
+    }
+
+    // extract peaks with AudioContext for now.
+    track.calculatePeaks(this.samplesPerPixel, this.sampleRate);
+
+    return track;
   }
 
   load(trackList) {
@@ -865,85 +956,10 @@ export default class {
         this.ee.emit('audiosourcesloaded');
 
         const tracks = audioBuffers.map((audioBuffer, index) => {
-          const info = trackList[index];
-          const name = info.name || 'Untitled';
-          const start = info.start || 0;
-          const states = info.states || {};
-          const fadeIn = info.fadeIn;
-          const fadeOut = info.fadeOut;
-          const cueIn = info.cuein || 0;
-          const cueOut = info.cueout || audioBuffer.duration;
-          const gain = info.gain || 1;
-          const muted = info.muted || false;
-          const soloed = info.soloed || false;
-          const selection = info.selected;
-          const peaks = info.peaks || { type: 'WebAudio', mono: this.mono };
-          const customClass = info.customClass || undefined;
-          const waveOutlineColor = info.waveOutlineColor || undefined;
-          const stereoPan = info.stereoPan || 0;
-          const effects = info.effects || null;
-
-          // webaudio specific playout for now.
-          const playout = new Playout(
-            this.ac,
-            audioBuffer,
-            this.masterGainNode,
-          );
-
-          const track = new Track();
-          track.src = info.src;
-          track.setBuffer(audioBuffer);
-          track.setId(new Date().getTime());
-          track.setName(name);
-          track.setEventEmitter(this.ee);
-          track.setEnabledStates(states);
-          track.setCues(cueIn, cueOut);
-          track.setCustomClass(customClass);
-          track.setWaveOutlineColor(waveOutlineColor);
-
-          if (fadeIn !== undefined) {
-            track.setFadeIn(fadeIn.duration, fadeIn.shape);
-          }
-
-          if (fadeOut !== undefined) {
-            track.setFadeOut(fadeOut.duration, fadeOut.shape);
-          }
-
-          if (selection !== undefined) {
-            this.setActiveTrack(track);
-            this.setTimeSelection(selection.start, selection.end);
-          }
-
-          if (peaks !== undefined) {
-            track.setPeakData(peaks);
-          }
-
-          track.setState(this.getState());
-          track.setStartTime(start);
-          track.setPlayout(playout);
-
-          track.setGainLevel(gain);
-          track.setStereoPanValue(stereoPan);
-          if (effects) {
-            track.setEffects(effects);
-          }
-
-          if (muted) {
-            this.muteTrack(track);
-          }
-
-          if (soloed) {
-            this.soloTrack(track);
-          }
-
-          // extract peaks with AudioContext for now.
-          track.calculatePeaks(this.samplesPerPixel, this.sampleRate);
-
-          return track;
+          return this.initTrack(trackList[index], audioBuffer);
         });
 
         this.tracks = this.tracks.concat(tracks);
-        this.cloneTracks = cloneDeep(this.tracks);
         this.adjustDuration();
         this.draw(this.render());
 
@@ -955,136 +971,30 @@ export default class {
   }
 
   reload(track, trackIndex, type, callback) {
-    const trackList = [
-      {
-        src: track.src,
-        name: track.name,
-      },
-    ];
     const trackId = track._id;
-    const loadPromises = trackList.map((trackInfo) => {
-      const loader = LoaderFactory.createLoader(
-        trackInfo.src,
-        this.ac,
-        this.ee,
-      );
-      return loader.load().then((audioBuffer) => {
-        if (audioBuffer.sampleRate === this.sampleRate) {
-          return audioBuffer;
-        } else {
-          return resampleAudioBuffer(audioBuffer, this.sampleRate);
-        }
-      });
-    });
+    const newTrack = this.initTrack(track, track.audioBuffer);
+    this.tracks.splice(trackIndex, 1, newTrack);
+    let removeMuteIndex = this.mutedTracks.findIndex(
+      (item) => item._id === trackId,
+    );
+    if (removeMuteIndex > -1) {
+      this.mutedTracks.splice(removeMuteIndex, 1);
+    }
+    let removeSoloIndex = this.soloedTracks.findIndex(
+      (item) => item._id === trackId,
+    );
+    if (removeSoloIndex > -1) {
+      this.soloedTracks.splice(removeSoloIndex, 1);
+    }
+    this.stop();
+    this.adjustDuration();
+    this.draw(this.render());
 
-    return Promise.all(loadPromises)
-      .then((audioBuffers) => {
-        this.ee.emit('audiosourcesloaded');
+    callback && callback();
 
-        const tracks = audioBuffers.map((audioBuffer, index) => {
-          const info = trackList[index];
-          const name = info.name || 'Untitled';
-          const start = info.start || 0;
-          const states = info.states || {};
-          const fadeIn = info.fadeIn;
-          const fadeOut = info.fadeOut;
-          const cueIn = info.cuein || 0;
-          const cueOut = info.cueout || audioBuffer.duration;
-          const gain = info.gain || 1;
-          const muted = info.muted || false;
-          const soloed = info.soloed || false;
-          const selection = info.selected;
-          const peaks = info.peaks || { type: 'WebAudio', mono: this.mono };
-          const customClass = info.customClass || undefined;
-          const waveOutlineColor = info.waveOutlineColor || undefined;
-          const stereoPan = info.stereoPan || 0;
-          const effects = info.effects || null;
-
-          // webaudio specific playout for now.
-          const playout = new Playout(
-            this.ac,
-            audioBuffer,
-            this.masterGainNode,
-          );
-
-          const track = new Track();
-          track.src = info.src;
-          track.setBuffer(audioBuffer);
-          track.setId(trackId);
-          track.setName(name);
-          track.setEventEmitter(this.ee);
-          track.setEnabledStates(states);
-          track.setCues(cueIn, cueOut);
-          track.setCustomClass(customClass);
-          track.setWaveOutlineColor(waveOutlineColor);
-
-          if (fadeIn !== undefined) {
-            track.setFadeIn(fadeIn.duration, fadeIn.shape);
-          }
-
-          if (fadeOut !== undefined) {
-            track.setFadeOut(fadeOut.duration, fadeOut.shape);
-          }
-
-          if (selection !== undefined) {
-            this.setActiveTrack(track);
-            this.setTimeSelection(selection.start, selection.end);
-          }
-
-          if (peaks !== undefined) {
-            track.setPeakData(peaks);
-          }
-
-          track.setState(this.getState());
-          track.setStartTime(start);
-          track.setPlayout(playout);
-
-          track.setGainLevel(gain);
-          track.setStereoPanValue(stereoPan);
-          if (effects) {
-            track.setEffects(effects);
-          }
-
-          if (muted) {
-            this.muteTrack(track);
-          }
-
-          if (soloed) {
-            this.soloTrack(track);
-          }
-
-          // extract peaks with AudioContext for now.
-          track.calculatePeaks(this.samplesPerPixel, this.sampleRate);
-
-          return track;
-        });
-
-        this.tracks.splice(trackIndex, 1, tracks[0]);
-        let removeMuteIndex = this.mutedTracks.findIndex(
-          (item) => item._id === trackId,
-        );
-        if (removeMuteIndex > -1) {
-          this.mutedTracks.splice(removeMuteIndex, 1);
-        }
-        let removeSoloIndex = this.soloedTracks.findIndex(
-          (item) => item._id === trackId,
-        );
-        if (removeSoloIndex > -1) {
-          this.soloedTracks.splice(removeSoloIndex, 1);
-        }
-        this.stop();
-        this.adjustDuration();
-        this.draw(this.render());
-
-        callback && callback();
-
-        if (type === 'manual') {
-          this.ee.emit('reloadfinished', trackIndex);
-        }
-      })
-      .catch((e) => {
-        this.ee.emit('audiosourceserror', e);
-      });
+    if (type === 'manual') {
+      this.ee.emit('reloadfinished', trackIndex);
+    }
   }
 
   /*

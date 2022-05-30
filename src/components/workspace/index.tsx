@@ -487,20 +487,18 @@ const Workspace = ({
         };
       });
       setClearModalVisible(false);
-      ee.emit('clear');
-      playContext.load(newTracks).then(() => {
-        dispatch?.({
-          type: 'global/update',
-          payload: {
-            currentTracks: [...newTracks],
-            revocationList: [],
-          },
-        });
-        setTrackList([...playContext.tracks]);
-        if (type === 'manual') {
-          debouncePushAction(currentProject.id, 'restoreAllTracks');
-        }
+      ee.emit('resetAll');
+      dispatch?.({
+        type: 'global/update',
+        payload: {
+          currentTracks: [...newTracks],
+          revocationList: [],
+        },
       });
+      setTrackList([...playContext.tracks]);
+      if (type === 'manual') {
+        debouncePushAction(currentProject.id, 'restoreAllTracks');
+      }
     },
     [currentTracks, playContext],
   );

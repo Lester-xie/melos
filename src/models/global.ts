@@ -163,12 +163,15 @@ const GlobalModel: GlobalModelType = {
               {
                 start: action.start,
                 end: action.end,
-                targetTrackIndex: action.targetTrackIndex,
                 position: action.position,
+                targetTrackIndex: action.targetTrackIndex,
               },
             ];
           }
-          revocationList.push({ name: 'copy', targetIndex: action.index });
+          revocationList.push({
+            name: 'copy',
+            targetIndex: action.targetTrackIndex,
+          });
           break;
         }
         case 'mute': {

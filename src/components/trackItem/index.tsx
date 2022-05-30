@@ -40,13 +40,11 @@ export default function TrackItem({
   const [gain, setGain] = useState<number>(100);
   const [stereopan, setStereopan] = useState<number>(0);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [shiftType, setShiftType] = useState<ShiftType>('auto');
   const [disabled, setDisabled] = useState(true);
   const [resetDisabled, setResetDisabled] = useState(true);
   const [revokeLoading, setRevokeLoading] = useState(false);
 
   const debouncedStartTime = useDebounce(startTime, 500) as number;
-  const debouncedShiftType = useDebounce(shiftType, 500) as ShiftType;
 
   const currentProject: { name: string; id: string } = useSelector(
     (state: any) => state.global.project,
@@ -82,7 +80,7 @@ export default function TrackItem({
         index,
       });
     }
-  }, [debouncedStartTime, debouncedShiftType]);
+  }, [debouncedStartTime]);
 
   // 初始化 mute && solo 的状态
   useEffect(() => {
@@ -111,9 +109,8 @@ export default function TrackItem({
       );
     });
 
-    const handleShift = (deltaTime: any, track: any, type: ShiftType) => {
+    const handleShift = (deltaTime: any, track: any) => {
       if (track._id === trackItem._id) {
-        setShiftType(type);
         setStartTime(trackItem.getStartTime());
       }
     };

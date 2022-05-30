@@ -46,8 +46,8 @@ const Message: FC = () => {
   useEffect(() => {
     if (
       msgRef.current &&
-      chatRecord.length > 0 &&
-      chatRecord[chatRecord.length - 1].isSelf
+      chatRecord.length > 0
+      // && chatRecord[chatRecord.length - 1].isSelf
     ) {
       msgRef.current.scrollTop = msgRef.current.scrollHeight;
     }
