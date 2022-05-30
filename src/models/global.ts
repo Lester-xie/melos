@@ -151,31 +151,29 @@ const GlobalModel: GlobalModelType = {
           revocationList.push({
             name: 'cut',
             targetIndex: action.index,
-            currentIndex: action.index,
           });
           break;
         }
         case 'copy': {
-          if (trackList[action.index].copy) {
-            trackList[action.index].copy.push({
+          if (trackList[action.targetTrackIndex].copy) {
+            trackList[action.targetTrackIndex].copy.push({
               start: action.start,
               end: action.end,
               position: action.position,
-              targetTrackIndex: action.targetTrackIndex,
+              copiedIndex: action.index,
             });
           } else {
-            trackList[action.index].copy = [
+            trackList[action.targetTrackIndex].copy = [
               {
                 start: action.start,
                 end: action.end,
                 position: action.position,
-                targetTrackIndex: action.targetTrackIndex,
+                copiedIndex: action.index,
               },
             ];
           }
           revocationList.push({
             name: 'copy',
-            currentIndex: action.index,
             targetIndex: action.targetTrackIndex,
           });
           break;

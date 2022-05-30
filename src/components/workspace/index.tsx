@@ -138,6 +138,7 @@ const Workspace = ({
           start: number;
           end: number;
           position: number;
+          copiedIndex: number;
           targetTrackIndex: number;
         }) => {
           ee.emit(
@@ -145,8 +146,8 @@ const Workspace = ({
             i.start,
             i.end,
             i.position,
+            i.copiedIndex,
             index,
-            i.targetTrackIndex,
           );
         },
       );
@@ -350,13 +351,15 @@ const Workspace = ({
             if (index === null) {
               setRevokeLoading(true);
             }
+
             const cloneData = cloneDeep(
-              cloneCurrentTracks[prevAction.currentIndex][optionName],
+              cloneCurrentTracks[prevAction.targetIndex][optionName],
             );
             cloneData.pop();
-            cloneCurrentTracks[prevAction.currentIndex][optionName] = [
+            cloneCurrentTracks[prevAction.targetIndex][optionName] = [
               ...cloneData,
             ];
+            console.log(cloneCurrentTracks);
             dispatch?.({
               type: 'global/update',
               payload: {
@@ -370,21 +373,11 @@ const Workspace = ({
               prevAction.targetIndex,
               'auto',
               () => {
-                if (optionName === 'cut') {
-                  cloneCurrentTracks.forEach((item: any, index: number) => {
-                    if (index === prevAction.targetIndex) {
-                      handleInit(item, index);
-                    }
-                  });
-                } else {
-                  console.log(prevAction);
-                  console.log(cloneCurrentTracks);
-                  cloneCurrentTracks.forEach((item: any, index: number) => {
-                    if (index === prevAction.currentIndex) {
-                      handleInit(item, index);
-                    }
-                  });
-                }
+                cloneCurrentTracks.forEach((item: any, index: number) => {
+                  if (index === prevAction.targetIndex) {
+                    handleInit(item, index);
+                  }
+                });
                 setTrackList([...playContext.tracks]);
                 callback();
               },
