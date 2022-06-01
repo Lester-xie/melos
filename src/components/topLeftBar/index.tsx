@@ -175,7 +175,7 @@ const TopLeftBar = () => {
                     src={EditIcon}
                     alt={'edit'}
                     onClick={(e) => {
-                      e.stopPropagation()
+                      e.stopPropagation();
                       setUpdatingProject({ name: p.name, id: p._id });
                     }}
                   />
@@ -217,7 +217,10 @@ const TopLeftBar = () => {
                     {moment(p.updatedAt).format('YYYY-MM-DD , hh:mm:ss')}
                   </div>
                 </div>
-                <div className={styles.options} onClick={e=>e.stopPropagation()}>
+                <div
+                  className={styles.options}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <img
                     src={EditIcon}
                     alt={'edit'}
@@ -310,6 +313,7 @@ const TopLeftBar = () => {
           padding: 0,
         }}
         footer={null}
+        destroyOnClose={true}
       >
         <header className={styles.header}>Create new project</header>
         <div className={styles.body}>
@@ -350,6 +354,7 @@ const TopLeftBar = () => {
           padding: 0,
         }}
         footer={null}
+        destroyOnClose={true}
       >
         <header className={styles.header}>Update project's name</header>
         <div className={styles.body}>

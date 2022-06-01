@@ -167,10 +167,12 @@ const Workspace = ({
   );
 
   useEffect(() => {
-    if (trackList.length === 0 && currentTracks.length > 0) {
+    if (currentProject.id) {
+      ee.emit('clear');
+      setTrackList([]);
       reloadPlayer();
     }
-  }, [currentTracks, trackList]);
+  }, [currentProject]);
 
   const container = useCallback(
     (node) => {

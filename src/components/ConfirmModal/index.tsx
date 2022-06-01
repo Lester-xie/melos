@@ -27,6 +27,7 @@ export default function ConfirmModal(props: Props) {
         padding: 0,
       }}
       footer={null}
+      destroyOnClose={true}
     >
       <p className={styles.text}>{props.text}</p>
       <footer className={styles.footer}>
