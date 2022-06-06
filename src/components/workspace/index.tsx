@@ -19,7 +19,7 @@ import TrackList from '@/components/trackList';
 import { io } from 'socket.io-client';
 import { connect } from 'umi';
 import { debouncePushAction, noticeRTCStatusChange } from '@/services/api';
-import { GlobalModelState, isInitTrack } from '@/models/global';
+import { GlobalModelState, isInitTrack, TrackInfo } from '@/models/global';
 import { ConnectProps } from '@@/plugin-dva/connect';
 import ConfirmModal from '@/components/ConfirmModal';
 
@@ -443,24 +443,34 @@ const Workspace = ({
     ee.emit('paste');
   };
 
-  const joinRoom = (projectId: string, projectName: string, key: string) => {
+  const joinRoom = (
+    projectId: string,
+    projectName: string,
+    key: string,
+    currentTracks: Array<TrackInfo>,
+  ) => {
     notification.close(key);
     dispatch?.({
       type: 'global/save',
       payload: {
         project: { id: projectId, name: projectName },
         roomId: `${global.project.id}-audio-room`,
+        currentTracks,
       },
     });
   };
 
-  const openNotification = (projectId: string, projectName: string) => {
+  const openNotification = (
+    projectId: string,
+    projectName: string,
+    currentTracks: Array<TrackInfo>,
+  ) => {
     const key = `open${Date.now()}`;
     const btn = (
       <Button
         type="primary"
         size="small"
-        onClick={() => joinRoom(projectId, projectName, key)}
+        onClick={() => joinRoom(projectId, projectName, key, currentTracks)}
       >
         Join
       </Button>
@@ -595,18 +605,17 @@ const Workspace = ({
           return;
         }
         if (arg.event === 'inviteMemberJoinRoom') {
-          const { projectId, userId, projectName } = arg.extraBody;
+          const { projectId, userId, projectName, currentTracks } =
+            arg.extraBody;
           const user = JSON.parse(localStorage.getItem('user') || '{}');
           if (userId !== user.id) {
             return;
           }
-          // if (projectId !== global.project.id) {
-          //   openNotification(projectId, projectName);
-          // }
-          openNotification(projectId, projectName);
+          openNotification(projectId, projectName, currentTracks);
           return;
         }
         if (arg.event === 'rtcStatusSync') {
+          // 收到请求rtc状态同步
           const { projectId } = arg.extraBody;
           if (projectId !== global.project.id) {
             return;
@@ -621,6 +630,7 @@ const Workspace = ({
         }
 
         if (arg.event === 'rtcStatusChange') {
+          // 接收到rtc状态同步
           const { isConnected, isMute, userId, projectId } = arg.extraBody;
           if (projectId !== global.project.id) {
             return;

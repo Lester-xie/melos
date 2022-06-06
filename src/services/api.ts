@@ -294,6 +294,7 @@ export async function inviteUserJoinRoom(
   userId: string,
   projectId: string,
   projectName: string,
+  currentTracks: Array<TrackInfo>,
 ) {
   return request('project/action/create', {
     method: 'POST',
@@ -303,6 +304,7 @@ export async function inviteUserJoinRoom(
         projectId,
         userId,
         projectName,
+        currentTracks,
       },
     },
   });

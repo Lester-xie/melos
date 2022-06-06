@@ -109,6 +109,7 @@ const Meeting: React.FC<IMeeting> = (props) => {
       userId,
       globalState.project.id,
       globalState.project.name,
+      globalState.currentTracks,
     ).then(async () => {
       noticeOnline(selfUser?.user?._id).then();
       await message.success('Message had been send');

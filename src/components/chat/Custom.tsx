@@ -13,6 +13,7 @@ import {
   noticeRTCStatusChange,
   updateMemberRole,
 } from '@/services/api';
+import { debounce } from 'lodash';
 const { TabPane } = Tabs;
 
 export const generateId = () => {
@@ -150,7 +151,7 @@ const CustomTab = () => {
       const onlineMembers = [...onMeetingUserRef.current].filter(
         (u) => u !== userId,
       );
-      const muteMembersIds = [...globalState.muteMembersIds].filter(
+      const muteMembersIds = [...onMuteIdsRef.current].filter(
         (u) => u !== userId,
       );
       dispatch({
@@ -161,16 +162,12 @@ const CustomTab = () => {
         },
       });
     },
-    [onMeetingUserRef, globalState],
+    [onMeetingUserRef, onMuteIdsRef],
   );
 
-  const toggleMute = (bol: boolean, userId: string = '') => {
-    let id = userId;
-    if (!userId) {
-      id = user.id;
-    }
+  const toggleMute = (bol: boolean, userId: string = user.id) => {
     const map = globalState.userIdMappingStreamId;
-    const streamId = map[id];
+    const streamId = map[userId];
     if (!streamId) {
       return;
     }
@@ -180,12 +177,27 @@ const CustomTab = () => {
       RTCRef.current?.streamEvents[streamId].stream.unmute('audio');
     }
     noticeRTCStatusChange(
-      user.id,
+      userId,
       globalState.project.id,
       !!globalState.roomId,
       bol,
     ).then();
   };
+
+  useEffect(() => {
+    // rtc mute status controller
+    onMeetingUserRef.current.forEach((userId) => {
+      const streamId = globalState.userIdMappingStreamId[userId];
+      const stream = RTCRef.current?.streamEvents[streamId]?.stream;
+      if (!stream) return;
+
+      if (onMuteIdsRef.current.includes(userId)) {
+        stream.mute('audio');
+      } else {
+        stream.unmute('audio');
+      }
+    });
+  }, [onMuteIdsRef.current.length, onMeetingUserRef.current.length]); // 使用length防止递归
 
   // inviteMember
   const inviteUser = async (userId: string) => {
@@ -353,7 +365,12 @@ const CustomTab = () => {
     // RTCRef.current.StreamsHandler.onSyncNeeded(streamId, 'ended');
     // RTCRef.current.disconnectWith( userId )
     RTCRef.current?.send(`tickTick#${userId}`);
-    noticeRTCStatusChange(userId, globalState.project.id, false, false).then();
+    noticeRTCStatusChange(
+      userId,
+      globalState.project.id,
+      false,
+      (onMuteIdsRef.current || []).includes(userId),
+    ).then();
   };
 
   useEffect(() => {
