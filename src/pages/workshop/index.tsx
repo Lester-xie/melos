@@ -42,6 +42,10 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
             userInfo: user,
           },
         });
+        // todo? 简单化处理
+        if (activeUser) {
+          window.location.href += '';
+        }
       }
     });
   };
