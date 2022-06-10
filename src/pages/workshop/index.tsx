@@ -3,8 +3,19 @@ import TopLeftBar from '@/components/topLeftBar';
 import Chat from '@/components/chat';
 import Workspace from '@/components/workspace';
 import { FC, useEffect, useRef, useState } from 'react';
-import { debouncePushAction, Login, updateProject } from '@/services/api';
-import { GlobalModelState, ConnectProps, Loading, connect } from 'umi';
+import {
+  debouncePushAction,
+  Login,
+  noticeRTCStatusChange,
+  updateProject,
+} from '@/services/api';
+import {
+  GlobalModelState,
+  ConnectProps,
+  Loading,
+  connect,
+  useSelector,
+} from 'umi';
 import { Input, message, Popover } from 'antd';
 import { UserInfo } from '@/models/global';
 const { Search } = Input;
@@ -23,6 +34,11 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
   } = global;
   const [token, setToken] = useState(window.localStorage.getItem('token'));
   const [downloadStatus, setDownloadStatus] = useState(false);
+
+  const userInfo = useSelector(
+    (state: { global: GlobalModelState }) => state.global.userInfo,
+  );
+
   const onBtnClicked = (name: string) => {
     setActiveUser(name);
     Login(name).then((res: any) => {
@@ -44,7 +60,30 @@ const IndexPage: FC<IndexProps> = ({ global, dispatch }) => {
         });
         // todo? 简单化处理
         if (activeUser) {
-          window.location.href += '';
+          if (userInfo && currentProject?.id) {
+            dispatch?.({
+              type: 'global/save',
+              payload: {
+                project: {
+                  name: '',
+                  id: '',
+                },
+                roomId: '',
+                currentTracks: [],
+                onlineMemberIds: [],
+              },
+            });
+            noticeRTCStatusChange(
+              userInfo.id,
+              currentProject.id,
+              false,
+              false,
+            ).then(() => {
+              window.location.href += '';
+            });
+          } else {
+            window.location.href += '';
+          }
         }
       }
     });
