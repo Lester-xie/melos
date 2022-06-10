@@ -9,10 +9,11 @@ import {
   getProjects,
   updateProject,
   delProject,
+  noticeRTCStatusChange,
 } from '@/services/api';
 import { useDispatch, useSelector } from 'umi';
 import moment from 'moment';
-import { TrackInfo } from '@/models/global';
+import { GlobalModelState, TrackInfo } from '@/models/global';
 
 const TopLeftBar = () => {
   const [newFlag, setNewFlag] = useState(false);
@@ -32,7 +33,11 @@ const TopLeftBar = () => {
   const dispatch = useDispatch();
 
   const currentProject: { name: string; id: string } = useSelector(
-    (state: any) => state.global.project,
+    (state: { global: GlobalModelState }) => state.global.project,
+  );
+
+  const userInfo = useSelector(
+    (state: { global: GlobalModelState }) => state.global.userInfo,
   );
 
   const createNewProject = async () => {
@@ -128,16 +133,35 @@ const TopLeftBar = () => {
     name: string,
     tracks: Array<TrackInfo>,
   ) => {
-    dispatch({
-      type: 'global/save',
-      payload: {
-        project: {
-          name,
-          id,
+    // 退出项目
+    if (currentProject?.id && userInfo) {
+      dispatch({
+        type: 'global/save',
+        payload: {
+          project: {
+            name: '',
+            id: '',
+          },
+          roomId: '',
+          currentTracks: [],
+          onlineMemberIds: [],
         },
-        currentTracks: tracks || [],
-      },
-    });
+      });
+      noticeRTCStatusChange(userInfo.id, currentProject.id, false, false);
+    }
+    //进入项目
+    setTimeout(() => {
+      dispatch({
+        type: 'global/save',
+        payload: {
+          project: {
+            name,
+            id,
+          },
+          currentTracks: tracks || [],
+        },
+      });
+    }, 100);
   };
   const JoinContent = (
     <div className={styles.project}>
