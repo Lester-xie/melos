@@ -23,14 +23,9 @@ export async function fetchPresigned(ext: string) {
 }
 
 export async function uploadAudio(uploadLink: string, data: any) {
-  const myHeaders = new Headers();
-  myHeaders.append('Content-Type', 'audio/mpeg');
-
   const requestOptions = {
     method: 'PUT',
-    headers: myHeaders,
     body: data,
-    redirect: 'follow',
   };
   // @ts-ignore
   return fetch(uploadLink, requestOptions);

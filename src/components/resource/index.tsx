@@ -180,9 +180,7 @@ export default function Resource(props: Props) {
     const preSignData = await fetchPresigned(fileSuffix);
     const uploadLink = preSignData.data.link;
     const token = preSignData.data.token;
-    const formdata = new FormData();
-    formdata.append('', file, token);
-    await uploadAudio(uploadLink, formdata);
+    await uploadAudio(uploadLink, file.slice());
     const res = await createAsset(token, userInfo.id, fileName);
     if (res.code === 0) {
       const data = res.data.result;
